@@ -1,0 +1,23 @@
+{
+  "name": "nanuqfi",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "test": "turbo test",
+    "test:int": "turbo test:int",
+    "lint": "turbo lint",
+    "clean": "turbo clean"
+  },
+  "devDependencies": {
+    "turbo": "^2",
+    "typescript": "^5.7",
+    "vitest": "^3",
+    "eslint": "^9",
+    "@typescript-eslint/eslint-plugin": "^8",
+    "@typescript-eslint/parser": "^8"
+  },
+  "packageManager": "pnpm@10.6.5",
+  "engines": {
+    "node": ">=22"
+  }
+}
