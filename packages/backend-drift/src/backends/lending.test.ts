@@ -42,13 +42,61 @@ describe('DriftLendingBackend', () => {
     expect(bps).toBeGreaterThanOrEqual(0)
   })
 
-  it('throws in real mode for deposit', async () => {
+  it('throws in real mode for deposit without driftClient', async () => {
     const realBackend = new DriftLendingBackend({ mockMode: false })
-    await expect(realBackend.deposit(1_000_000n)).rejects.toThrow('not yet implemented')
+    await expect(realBackend.deposit(1_000_000n)).rejects.toThrow('DriftClient required')
   })
 
-  it('throws in real mode for getExpectedYield', async () => {
+  it('throws in real mode for getExpectedYield without driftClient', async () => {
     const realBackend = new DriftLendingBackend({ mockMode: false })
-    await expect(realBackend.getExpectedYield()).rejects.toThrow('not yet implemented')
+    await expect(realBackend.getExpectedYield()).rejects.toThrow('DriftClient required')
+  })
+})
+
+describe('DriftLendingBackend real mode', () => {
+  it('accepts driftClient in constructor', () => {
+    const mockDriftClient = {} as any
+    const backend = new DriftLendingBackend({ mockMode: false, driftClient: mockDriftClient })
+    expect(backend.name).toBe('drift-lending')
+  })
+
+  it('throws if real mode without driftClient for getRisk', async () => {
+    const backend = new DriftLendingBackend({ mockMode: false })
+    await expect(backend.getRisk()).rejects.toThrow('DriftClient required')
+  })
+
+  it('throws if real mode without driftClient for withdraw', async () => {
+    const backend = new DriftLendingBackend({ mockMode: false })
+    await expect(backend.withdraw(1_000_000n)).rejects.toThrow('DriftClient required')
+  })
+
+  it('throws if real mode without driftClient for getPosition', async () => {
+    const backend = new DriftLendingBackend({ mockMode: false })
+    await expect(backend.getPosition()).rejects.toThrow('DriftClient required')
+  })
+
+  it('preserves mock mode behavior', async () => {
+    const backend = new DriftLendingBackend({ mockMode: true, mockApy: 0.10 })
+    const yield_ = await backend.getExpectedYield()
+    expect(yield_.annualizedApy).toBe(0.10)
+    expect(yield_.metadata?.mode).toBe('mock')
+  })
+
+  it('preserves mock mode risk metrics', async () => {
+    const backend = new DriftLendingBackend({ mockMode: true, mockVolatility: 0.03 })
+    const risk = await backend.getRisk()
+    expect(risk.volatilityScore).toBe(0.03)
+    expect(risk.metadata?.mode).toBe('mock')
+  })
+
+  it('returns slippage 1 in real mode without driftClient', async () => {
+    const backend = new DriftLendingBackend({ mockMode: false })
+    const slippage = await backend.estimateSlippage(1_000_000n)
+    expect(slippage).toBe(1)
+  })
+
+  it('defaults to real mode when no config provided', () => {
+    const backend = new DriftLendingBackend()
+    expect(backend.name).toBe('drift-lending')
   })
 })
