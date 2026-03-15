@@ -65,8 +65,71 @@ describe('DriftBasisTradeBackend', () => {
     expect(backend.shouldAutoExit(history)).toBe(true)
   })
 
-  it('throws in real mode', async () => {
+  it('throws in real mode without driftClient', async () => {
     const realBackend = new DriftBasisTradeBackend({ mockMode: false })
-    await expect(realBackend.getExpectedYield()).rejects.toThrow('not yet implemented')
+    await expect(realBackend.getExpectedYield()).rejects.toThrow('DriftClient required')
+  })
+})
+
+describe('DriftBasisTradeBackend real mode', () => {
+  it('accepts driftClient in constructor', () => {
+    const backend = new DriftBasisTradeBackend({ mockMode: false, driftClient: {} as any })
+    expect(backend.name).toBe('drift-basis')
+  })
+
+  it('throws if real mode without driftClient for getExpectedYield', async () => {
+    const backend = new DriftBasisTradeBackend({ mockMode: false })
+    await expect(backend.getExpectedYield()).rejects.toThrow('DriftClient required')
+  })
+
+  it('throws if real mode without driftClient for getRisk', async () => {
+    const backend = new DriftBasisTradeBackend({ mockMode: false })
+    await expect(backend.getRisk()).rejects.toThrow('DriftClient required')
+  })
+
+  it('throws if real mode without driftClient for deposit', async () => {
+    const backend = new DriftBasisTradeBackend({ mockMode: false })
+    await expect(backend.deposit(1_000_000n)).rejects.toThrow('DriftClient required')
+  })
+
+  it('throws if real mode without driftClient for withdraw', async () => {
+    const backend = new DriftBasisTradeBackend({ mockMode: false })
+    await expect(backend.withdraw(1_000_000n)).rejects.toThrow('DriftClient required')
+  })
+
+  it('throws if real mode without driftClient for getPosition', async () => {
+    const backend = new DriftBasisTradeBackend({ mockMode: false })
+    await expect(backend.getPosition()).rejects.toThrow('DriftClient required')
+  })
+
+  it('returns slippage 5 in real mode without driftClient', async () => {
+    const backend = new DriftBasisTradeBackend({ mockMode: false })
+    const slippage = await backend.estimateSlippage(1_000_000n)
+    expect(slippage).toBe(5)
+  })
+
+  it('preserves mock mode behavior', async () => {
+    const backend = new DriftBasisTradeBackend({ mockMode: true, mockApy: 0.25 })
+    const yield_ = await backend.getExpectedYield()
+    expect(yield_.annualizedApy).toBe(0.25)
+    expect(yield_.metadata?.mode).toBe('mock')
+  })
+
+  it('preserves mock mode risk metrics', async () => {
+    const backend = new DriftBasisTradeBackend({ mockMode: true, mockVolatility: 0.15 })
+    const risk = await backend.getRisk()
+    expect(risk.volatilityScore).toBe(0.15)
+    expect(risk.metadata?.mode).toBe('mock')
+  })
+
+  it('preserves shouldAutoExit behavior', () => {
+    const backend = new DriftBasisTradeBackend({ mockMode: true })
+    expect(backend.shouldAutoExit([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1])).toBe(true)
+    expect(backend.shouldAutoExit([1, 1, 1, 1])).toBe(false)
+  })
+
+  it('defaults to real mode when no config provided', () => {
+    const backend = new DriftBasisTradeBackend()
+    expect(backend.name).toBe('drift-basis')
   })
 })
