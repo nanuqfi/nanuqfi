@@ -9,15 +9,20 @@
     "clean": "turbo clean"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8",
+    "@typescript-eslint/parser": "^8",
+    "eslint": "^9",
     "turbo": "^2",
     "typescript": "^5.7",
-    "vitest": "^3",
-    "eslint": "^9",
-    "@typescript-eslint/eslint-plugin": "^8",
-    "@typescript-eslint/parser": "^8"
+    "vitest": "^3"
   },
   "packageManager": "pnpm@10.6.5",
   "engines": {
     "node": ">=22"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4"
   }
 }
