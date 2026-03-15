@@ -12,7 +12,10 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@nanuqfi/core": "workspace:*"
+    "@coral-xyz/anchor": "^0.32.1",
+    "@drift-labs/sdk": "2.159.0-beta.2",
+    "@nanuqfi/core": "workspace:*",
+    "@solana/web3.js": "^1.98.4"
   },
   "devDependencies": {
     "typescript": "^5.7",
