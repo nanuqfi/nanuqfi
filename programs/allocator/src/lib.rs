@@ -217,7 +217,7 @@ pub mod nanuqfi_allocator {
     // Verify no existing pending withdrawal
     require!(
       position.pending_withdrawal_shares == 0,
-      AllocatorError::LeaseConflict
+      AllocatorError::HasPendingWithdrawal
     );
 
     // Verify user has enough shares

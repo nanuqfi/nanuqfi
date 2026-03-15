@@ -34,6 +34,8 @@ pub enum AllocatorError {
     CannotLoosenGuardrails,
     #[msg("Keeper lease is active for another instance")]
     LeaseConflict,
+    #[msg("Already has a pending withdrawal")]
+    HasPendingWithdrawal,
     #[msg("Insufficient vault balance for withdrawal")]
     InsufficientBalance,
     #[msg("Arithmetic overflow")]
