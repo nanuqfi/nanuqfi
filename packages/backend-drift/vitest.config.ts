@@ -4,6 +4,6 @@ export default defineConfig({
   test: {
     testTimeout: 5_000,
     teardownTimeout: 3_000,
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
   },
 })

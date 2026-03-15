@@ -15,5 +15,7 @@ export type { DriftFundingConfig } from './backends/funding'
 export { DriftJitoDNBackend } from './backends/jito-dn'
 export type { DriftJitoDNConfig } from './backends/jito-dn'
 
-export { createDriftConnection } from './drift-connection'
+export { createDriftConnection, isSubscriptionHealthy } from './drift-connection'
 export type { DriftConnectionConfig } from './drift-connection'
+
+export { toBN, fromBN, toSpotPrecision, fromSpotPrecision } from './utils/bn-convert'
