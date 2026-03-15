@@ -1,0 +1,41 @@
+use anchor_lang::prelude::*;
+
+#[error_code]
+pub enum AllocatorError {
+    #[msg("Weights must sum to 10000 (basis points)")]
+    InvalidWeightSum,
+    #[msg("Weight exceeds maximum allocation for this strategy")]
+    WeightExceedsMax,
+    #[msg("Negative weight value")]
+    NegativeWeight,
+    #[msg("Rebalance interval not met")]
+    RebalanceTooSoon,
+    #[msg("Allocation shift exceeds maximum per rebalance")]
+    ShiftTooLarge,
+    #[msg("Unauthorized: not the keeper authority")]
+    UnauthorizedKeeper,
+    #[msg("Unauthorized: not the admin")]
+    UnauthorizedAdmin,
+    #[msg("Allocator is halted")]
+    AllocatorHalted,
+    #[msg("Drawdown exceeds maximum for this vault tier")]
+    DrawdownExceeded,
+    #[msg("Oracle divergence exceeds threshold")]
+    OracleDivergence,
+    #[msg("Redemption period not elapsed")]
+    RedemptionPeriodNotElapsed,
+    #[msg("No pending withdrawal")]
+    NoPendingWithdrawal,
+    #[msg("Invalid risk level")]
+    InvalidRiskLevel,
+    #[msg("Vault already initialized")]
+    VaultAlreadyInitialized,
+    #[msg("Cannot loosen guardrails beyond initial values")]
+    CannotLoosenGuardrails,
+    #[msg("Keeper lease is active for another instance")]
+    LeaseConflict,
+    #[msg("Insufficient vault balance for withdrawal")]
+    InsufficientBalance,
+    #[msg("Arithmetic overflow")]
+    MathOverflow,
+}
