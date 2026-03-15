@@ -40,4 +40,14 @@ pub enum AllocatorError {
     InsufficientBalance,
     #[msg("Arithmetic overflow")]
     MathOverflow,
+    #[msg("Drift vault capacity exceeded")]
+    VaultCapacityExceeded,
+    #[msg("Oracle price data is stale")]
+    StaleOracle,
+    #[msg("Insufficient liquid USDC in vault for withdrawal")]
+    InsufficientLiquidity,
+    #[msg("Drift CPI failed")]
+    DriftCpiFailed,
+    #[msg("Deposit exceeds vault cap")]
+    DepositCapExceeded,
 }

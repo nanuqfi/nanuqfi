@@ -63,6 +63,7 @@ pub mod nanuqfi_allocator {
     max_drawdown_bps: u16,
     max_leverage_bps: u16,
     redemption_period_slots: u64,
+    deposit_cap: u64,
   ) -> Result<()> {
     let vault = &mut ctx.accounts.risk_vault;
     vault.allocator = ctx.accounts.allocator.key();
@@ -84,6 +85,7 @@ pub mod nanuqfi_allocator {
     vault.max_drawdown_bps = max_drawdown_bps;
     vault.max_leverage_bps = max_leverage_bps;
     vault.redemption_period_slots = redemption_period_slots;
+    vault.deposit_cap = deposit_cap;
     vault.bump = ctx.bumps.risk_vault;
     Ok(())
   }
@@ -104,6 +106,19 @@ pub mod nanuqfi_allocator {
   pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     require!(!ctx.accounts.allocator.halted, AllocatorError::AllocatorHalted);
     require!(amount > 0, AllocatorError::InsufficientBalance);
+
+    // Deposit cap check (0 = uncapped)
+    let deposit_cap = ctx.accounts.risk_vault.deposit_cap;
+    let total_assets = ctx.accounts.risk_vault.total_assets;
+    if deposit_cap > 0 {
+      require!(
+        total_assets
+          .checked_add(amount)
+          .ok_or(AllocatorError::MathOverflow)?
+          <= deposit_cap,
+        AllocatorError::DepositCapExceeded
+      );
+    }
 
     let vault = &mut ctx.accounts.risk_vault;
 
@@ -327,16 +342,15 @@ pub mod nanuqfi_allocator {
     let allocator_bump = allocator.bump;
     let signer_seeds: &[&[&[u8]]] = &[&[b"allocator".as_ref(), &[allocator_bump]]];
 
-    // Burn shares from user
+    // Burn shares from user (user is the authority over their own token account)
     token::burn(
-      CpiContext::new_with_signer(
+      CpiContext::new(
         ctx.accounts.token_program.to_account_info(),
         Burn {
           mint: ctx.accounts.share_mint.to_account_info(),
           from: ctx.accounts.user_shares.to_account_info(),
-          authority: ctx.accounts.allocator.to_account_info(),
+          authority: ctx.accounts.user.to_account_info(),
         },
-        signer_seeds,
       ),
       shares,
     )?;
@@ -774,6 +788,72 @@ pub mod nanuqfi_allocator {
     msg!("Treasury withdrawal: {} USDC", amount);
     Ok(())
   }
+
+  // ─── 13. Update Deposit Cap ─────────────────────────────────────────
+
+  pub fn update_deposit_cap(ctx: Context<UpdateDepositCap>, new_cap: u64) -> Result<()> {
+    let vault = &mut ctx.accounts.risk_vault;
+    vault.deposit_cap = new_cap;
+    Ok(())
+  }
+
+  // ─── 14. Allocate to Drift (Scaffold) ───────────────────────────────
+
+  pub fn allocate_to_drift(ctx: Context<AllocateToDrift>, amount: u64) -> Result<()> {
+    let allocator = &ctx.accounts.allocator;
+    require!(!allocator.halted, AllocatorError::AllocatorHalted);
+    require!(
+      ctx.accounts.vault_usdc.amount >= amount,
+      AllocatorError::InsufficientBalance
+    );
+
+    let allocator_bump = allocator.bump;
+    let signer_seeds: &[&[&[u8]]] = &[&[b"allocator".as_ref(), &[allocator_bump]]];
+
+    token::transfer(
+      CpiContext::new_with_signer(
+        ctx.accounts.token_program.to_account_info(),
+        Transfer {
+          from: ctx.accounts.vault_usdc.to_account_info(),
+          to: ctx.accounts.drift_usdc.to_account_info(),
+          authority: ctx.accounts.allocator.to_account_info(),
+        },
+        signer_seeds,
+      ),
+      amount,
+    )?;
+
+    Ok(())
+  }
+
+  // ─── 15. Recall from Drift (Scaffold) ───────────────────────────────
+
+  pub fn recall_from_drift(ctx: Context<RecallFromDrift>, amount: u64) -> Result<()> {
+    let allocator = &ctx.accounts.allocator;
+    require!(!allocator.halted, AllocatorError::AllocatorHalted);
+    require!(
+      ctx.accounts.drift_usdc.amount >= amount,
+      AllocatorError::InsufficientBalance
+    );
+
+    let allocator_bump = allocator.bump;
+    let signer_seeds: &[&[&[u8]]] = &[&[b"allocator".as_ref(), &[allocator_bump]]];
+
+    token::transfer(
+      CpiContext::new_with_signer(
+        ctx.accounts.token_program.to_account_info(),
+        Transfer {
+          from: ctx.accounts.drift_usdc.to_account_info(),
+          to: ctx.accounts.vault_usdc.to_account_info(),
+          authority: ctx.accounts.allocator.to_account_info(),
+        },
+        signer_seeds,
+      ),
+      amount,
+    )?;
+
+    Ok(())
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1172,5 +1252,48 @@ pub struct WithdrawTreasury<'info> {
   pub admin_usdc: Account<'info, TokenAccount>,
 
   pub admin: Signer<'info>,
+  pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+pub struct UpdateDepositCap<'info> {
+  #[account(seeds = [b"allocator"], bump = allocator.bump)]
+  pub allocator: Account<'info, Allocator>,
+  #[account(
+    mut,
+    constraint = risk_vault.allocator == allocator.key(),
+  )]
+  pub risk_vault: Account<'info, RiskVault>,
+  #[account(constraint = admin.key() == allocator.admin @ AllocatorError::UnauthorizedAdmin)]
+  pub admin: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct AllocateToDrift<'info> {
+  #[account(mut, seeds = [b"allocator"], bump = allocator.bump)]
+  pub allocator: Account<'info, Allocator>,
+  #[account(mut, constraint = risk_vault.allocator == allocator.key())]
+  pub risk_vault: Account<'info, RiskVault>,
+  #[account(constraint = keeper.key() == allocator.keeper_authority @ AllocatorError::UnauthorizedKeeper)]
+  pub keeper: Signer<'info>,
+  #[account(mut)]
+  pub vault_usdc: Account<'info, TokenAccount>,
+  #[account(mut)]
+  pub drift_usdc: Account<'info, TokenAccount>,
+  pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+pub struct RecallFromDrift<'info> {
+  #[account(mut, seeds = [b"allocator"], bump = allocator.bump)]
+  pub allocator: Account<'info, Allocator>,
+  #[account(mut, constraint = risk_vault.allocator == allocator.key())]
+  pub risk_vault: Account<'info, RiskVault>,
+  #[account(constraint = keeper.key() == allocator.keeper_authority @ AllocatorError::UnauthorizedKeeper)]
+  pub keeper: Signer<'info>,
+  #[account(mut)]
+  pub vault_usdc: Account<'info, TokenAccount>,
+  #[account(mut)]
+  pub drift_usdc: Account<'info, TokenAccount>,
   pub token_program: Program<'info, Token>,
 }

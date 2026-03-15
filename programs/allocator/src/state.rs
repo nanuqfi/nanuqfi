@@ -53,6 +53,7 @@ pub struct RiskVault {
     pub max_drawdown_bps: u16,
     pub max_leverage_bps: u16,
     pub redemption_period_slots: u64,
+    pub deposit_cap: u64,
     pub bump: u8,
 }
 
