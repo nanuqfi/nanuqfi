@@ -7,14 +7,18 @@ import type {
   TxSignature,
   RiskLevel,
 } from '@nanuqfi/core'
+import type { DriftClient } from '@drift-labs/sdk'
+import { BN } from '@coral-xyz/anchor'
+import { fetchFundingRates, parseFundingRate } from '../utils/drift-data-api'
 
 export interface DriftFundingConfig {
   mockMode?: boolean
   mockApy?: number
   mockVolatility?: number
+  driftClient?: DriftClient
 }
 
-const NOT_IMPLEMENTED = 'DriftFundingBackend: real mode not yet implemented. Use mockMode for unit testing.'
+const USDC_MARKET_INDEX = 0
 
 /**
  * PnL stop-loss thresholds per risk level.
@@ -43,14 +47,27 @@ export class DriftFundingBackend implements YieldBackend {
     features: ['drift-perp-funding', 'leveraged', 'auto-exit-on-pnl-loss'],
   }
 
-  private readonly config: Required<DriftFundingConfig>
+  private readonly mockConfig: { mockMode: boolean; mockApy: number; mockVolatility: number }
+  private readonly driftClient?: DriftClient
 
   constructor(config: DriftFundingConfig = {}) {
-    this.config = {
+    this.mockConfig = {
       mockMode: config.mockMode ?? false,
       mockApy: config.mockApy ?? 0.30,
       mockVolatility: config.mockVolatility ?? 0.35,
     }
+    this.driftClient = config.driftClient
+  }
+
+  private get isMockMode(): boolean {
+    return this.mockConfig.mockMode
+  }
+
+  private requireDriftClient(): DriftClient {
+    if (!this.driftClient) {
+      throw new Error('DriftClient required for real mode')
+    }
+    return this.driftClient
   }
 
   /**
@@ -71,67 +88,111 @@ export class DriftFundingBackend implements YieldBackend {
   }
 
   async getExpectedYield(): Promise<YieldEstimate> {
-    if (!this.config.mockMode) {
-      throw new Error(NOT_IMPLEMENTED)
+    if (this.isMockMode) {
+      return {
+        annualizedApy: this.mockConfig.mockApy,
+        source: this.name,
+        asset: 'USDC',
+        confidence: 0.75,
+        timestamp: Date.now(),
+        metadata: { mode: 'mock' },
+      }
     }
+    this.requireDriftClient()
+    const rates = await fetchFundingRates('SOL-PERP')
+    if (rates.length === 0) {
+      return {
+        annualizedApy: 0,
+        source: this.name,
+        asset: 'USDC',
+        confidence: 0.5,
+        timestamp: Date.now(),
+        metadata: { mode: 'real' },
+      }
+    }
+    const latest = parseFundingRate(rates[rates.length - 1]!)
     return {
-      annualizedApy: this.config.mockApy,
+      annualizedApy: latest.annualizedApr / 100,
       source: this.name,
       asset: 'USDC',
       confidence: 0.75,
       timestamp: Date.now(),
-      metadata: { mode: 'mock' },
+      metadata: { mode: 'real', fundingRate: latest.hourlyRate },
     }
   }
 
   async getRisk(): Promise<RiskMetrics> {
-    if (!this.config.mockMode) {
-      throw new Error(NOT_IMPLEMENTED)
+    if (this.isMockMode) {
+      return {
+        volatilityScore: this.mockConfig.mockVolatility,
+        maxDrawdown: 0.08,
+        liquidationRisk: 'medium',
+        correlationToMarket: 0.45,
+        metadata: { mode: 'mock' },
+      }
     }
+    this.requireDriftClient()
+    // Directional perp — static high-risk profile
     return {
-      volatilityScore: this.config.mockVolatility,
+      volatilityScore: 0.35,
       maxDrawdown: 0.08,
-      liquidationRisk: 'medium',
+      liquidationRisk: 'medium' as const,
       correlationToMarket: 0.45,
-      metadata: { mode: 'mock' },
+      metadata: { mode: 'real' },
     }
   }
 
   async estimateSlippage(_amount: bigint): Promise<number> {
-    if (!this.config.mockMode) {
-      throw new Error(NOT_IMPLEMENTED)
-    }
+    if (this.isMockMode) return 10
     // Leveraged perp — higher slippage risk
     return 10
   }
 
-  async deposit(_amount: bigint, _params?: Record<string, unknown>): Promise<TxSignature> {
-    if (!this.config.mockMode) {
-      throw new Error(NOT_IMPLEMENTED)
-    }
-    return `mock-tx-drift-funding-deposit-${Date.now()}`
+  async deposit(amount: bigint, _params?: Record<string, unknown>): Promise<TxSignature> {
+    if (this.isMockMode) return `mock-tx-drift-funding-deposit-${Date.now()}`
+    const dc = this.requireDriftClient()
+    const bnAmount = dc.convertToSpotPrecision(USDC_MARKET_INDEX, Number(amount) / 1e6)
+    const ata = await dc.getAssociatedTokenAccount(USDC_MARKET_INDEX)
+    const txSig = await dc.deposit(bnAmount, USDC_MARKET_INDEX, ata)
+    // Perp position opening is deferred to keeper (trading delegate)
+    return txSig
   }
 
-  async withdraw(_amount: bigint): Promise<TxSignature> {
-    if (!this.config.mockMode) {
-      throw new Error(NOT_IMPLEMENTED)
-    }
-    return `mock-tx-drift-funding-withdraw-${Date.now()}`
+  async withdraw(amount: bigint): Promise<TxSignature> {
+    if (this.isMockMode) return `mock-tx-drift-funding-withdraw-${Date.now()}`
+    const dc = this.requireDriftClient()
+    const bnAmount = dc.convertToSpotPrecision(USDC_MARKET_INDEX, Number(amount) / 1e6)
+    const ata = await dc.getAssociatedTokenAccount(USDC_MARKET_INDEX)
+    // Perp closure deferred to keeper (trading delegate)
+    const txSig = await dc.withdraw(bnAmount, USDC_MARKET_INDEX, ata)
+    return txSig
   }
 
   async getPosition(): Promise<PositionState> {
-    if (!this.config.mockMode) {
-      throw new Error(NOT_IMPLEMENTED)
+    if (this.isMockMode) {
+      return {
+        backend: this.name,
+        asset: 'USDC',
+        depositedAmount: 0n,
+        currentValue: 0n,
+        unrealizedPnl: 0n,
+        entryTimestamp: 0,
+        isActive: false,
+        metadata: { mode: 'mock' },
+      }
     }
+    const dc = this.requireDriftClient()
+    const user = dc.getUser()
+    const spotPosition = user.getSpotPosition(USDC_MARKET_INDEX)
     return {
       backend: this.name,
       asset: 'USDC',
-      depositedAmount: 0n,
-      currentValue: 0n,
+      depositedAmount: spotPosition ? BigInt(spotPosition.scaledBalance.toString()) : 0n,
+      currentValue: spotPosition ? BigInt(spotPosition.scaledBalance.toString()) : 0n,
       unrealizedPnl: 0n,
       entryTimestamp: 0,
-      isActive: false,
-      metadata: { mode: 'mock' },
+      isActive: spotPosition ? spotPosition.scaledBalance.gt(new BN(0)) : false,
+      metadata: { mode: 'real' },
     }
   }
 }
