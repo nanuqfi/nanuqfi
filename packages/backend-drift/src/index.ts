@@ -19,3 +19,6 @@ export { createDriftConnection, isSubscriptionHealthy } from './drift-connection
 export type { DriftConnectionConfig } from './drift-connection'
 
 export { toBN, fromBN, toSpotPrecision, fromSpotPrecision } from './utils/bn-convert'
+
+export { fetchFundingRates, fetchDepositRate, fetchBorrowRate, parseFundingRate, parseDepositRate, DRIFT_DATA_API_URL } from './utils/drift-data-api'
+export type { RawFundingRate, ParsedFundingRate } from './utils/drift-data-api'
