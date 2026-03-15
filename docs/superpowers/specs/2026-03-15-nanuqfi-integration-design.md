@@ -512,8 +512,8 @@ All components deploy to VPS reclabs3 (151.245.137.75). No Vercel.
 
 | Domain | Target | Type |
 |---|---|---|
-| `app.nanuqfi.xyz` | `localhost:9001` | A record → 151.245.137.75 |
-| `keeper.nanuqfi.xyz` | `localhost:9000` | A record → 151.245.137.75 |
+| `app.nanuqfi.com` | `localhost:9001` | A record → 151.245.137.75 |
+| `keeper.nanuqfi.com` | `localhost:9000` | A record → 151.245.137.75 |
 
 SSL via `certbot --nginx -d <domain>`.
 
@@ -540,7 +540,7 @@ Port: 9001 (host) → 3000 (container)
 Env vars:
   NEXT_PUBLIC_RPC_URL
   NEXT_PUBLIC_ALLOCATOR_PROGRAM_ID
-  NEXT_PUBLIC_KEEPER_API_URL=https://keeper.nanuqfi.xyz
+  NEXT_PUBLIC_KEEPER_API_URL=https://keeper.nanuqfi.com
 ```
 
 ### Allocator Program

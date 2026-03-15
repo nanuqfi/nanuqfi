@@ -675,5 +675,5 @@ Alert severity levels:
 ## 16. Brand
 
 - **Name:** NANUQFI (nanuq = Inuit for polar bear + fi = finance)
-- **Handles:** @nanuqfi, nanuqfi.xyz, github.com/nanuqfi
+- **Handles:** @nanuqfi, nanuqfi.com, github.com/nanuqfi
 - **Brand guidelines:** To be created before frontend work begins

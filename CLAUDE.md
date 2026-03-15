@@ -1,7 +1,7 @@
 # CLAUDE.md - NanuqFi Ecosystem
 
 **Organization:** https://github.com/nanuqfi
-**Website:** nanuqfi.xyz
+**Website:** nanuqfi.com
 **Purpose:** This file contains ecosystem-wide context for AI assistants working across all NanuqFi repositories
 
 ---

@@ -655,8 +655,8 @@ Add to `~/.ssh/vps-port-registry.md`:
 
 ```markdown
 ### NanuqFi Project (user: nanuqfi)
-- **9000** - nanuqfi-keeper (REST API - keeper.nanuqfi.xyz)
-- **9001** - nanuqfi-app (Next.js frontend - app.nanuqfi.xyz)
+- **9000** - nanuqfi-keeper (REST API - keeper.nanuqfi.com)
+- **9001** - nanuqfi-app (Next.js frontend - app.nanuqfi.com)
 ```
 
 - [ ] **Step 5: Verify SSH access**
@@ -1710,14 +1710,14 @@ git commit -m "feat: wire all pages to real on-chain data and keeper API"
 ### Task 16: DNS + Nginx + SSL
 
 - [ ] **Step 1: Create DNS records** at domain registrar:
-  - `app.nanuqfi.xyz` → A record → `151.245.137.75`
-  - `keeper.nanuqfi.xyz` → A record → `151.245.137.75`
+  - `app.nanuqfi.com` → A record → `151.245.137.75`
+  - `keeper.nanuqfi.com` → A record → `151.245.137.75`
 
 - [ ] **Step 2: Verify DNS resolves**
 
 ```bash
-dig app.nanuqfi.xyz +short
-dig keeper.nanuqfi.xyz +short
+dig app.nanuqfi.com +short
+dig keeper.nanuqfi.com +short
 ```
 Expected: `151.245.137.75`
 
@@ -1727,7 +1727,7 @@ Expected: `151.245.137.75`
 ssh reclabs3 "cat > /etc/nginx/sites-available/nanuqfi-keeper << 'EOF'
 server {
     listen 80;
-    server_name keeper.nanuqfi.xyz;
+    server_name keeper.nanuqfi.com;
     location / {
         proxy_pass http://localhost:9000;
         proxy_set_header Host \$host;
@@ -1744,7 +1744,7 @@ Same pattern for `nanuqfi-app` on port 9001.
 - [ ] **Step 4: SSL certificates**
 
 ```bash
-ssh reclabs3 "certbot --nginx -d keeper.nanuqfi.xyz -d app.nanuqfi.xyz"
+ssh reclabs3 "certbot --nginx -d keeper.nanuqfi.com -d app.nanuqfi.com"
 ```
 
 ---
