@@ -31,7 +31,9 @@ const PROGRAM_ID = new PublicKey('2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P')
 const DRIFT_PROGRAM_ID = new PublicKey('dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH')
 
 // Devnet USDC (Circle's official devnet USDC — same as setup-devnet.ts)
-const USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')
+// Test USDC mint (created by us on devnet — we have mint authority)
+// For Drift CPI testing, use Drift's devnet USDC: 8zGuJQqwhZafTah7Uc7Z4tXRnguqkn5KLFAP8oV6PHe2
+const USDC_MINT = new PublicKey('BiTXT15XyfSakk5Yz8L8QrzHPWbK8NjoZeEMFrDvKdKh')
 
 // Deposit amount: 10 USDC (6 decimals)
 const DEPOSIT_AMOUNT = 10_000_000
