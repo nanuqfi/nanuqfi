@@ -819,6 +819,12 @@ pub mod nanuqfi_allocator {
     Ok(())
   }
 
+  pub fn update_treasury_usdc(ctx: Context<UpdateTreasuryUsdc>) -> Result<()> {
+    let treasury = &mut ctx.accounts.treasury;
+    treasury.usdc_token_account = ctx.accounts.new_treasury_usdc.key();
+    Ok(())
+  }
+
   // ─── 14. Allocate to Drift (Real CPI) ───────────────────────────────
 
   pub fn allocate_to_drift(ctx: Context<AllocateToDrift>, amount: u64) -> Result<()> {
@@ -1495,6 +1501,22 @@ pub struct UpdateDepositCap<'info> {
     constraint = risk_vault.allocator == allocator.key(),
   )]
   pub risk_vault: Account<'info, RiskVault>,
+  #[account(constraint = admin.key() == allocator.admin @ AllocatorError::UnauthorizedAdmin)]
+  pub admin: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct UpdateTreasuryUsdc<'info> {
+  #[account(seeds = [b"allocator"], bump = allocator.bump)]
+  pub allocator: Account<'info, Allocator>,
+  #[account(
+    mut,
+    seeds = [b"treasury"],
+    bump = treasury.bump,
+    constraint = treasury.allocator == allocator.key(),
+  )]
+  pub treasury: Account<'info, Treasury>,
+  pub new_treasury_usdc: Account<'info, TokenAccount>,
   #[account(constraint = admin.key() == allocator.admin @ AllocatorError::UnauthorizedAdmin)]
   pub admin: Signer<'info>,
 }
