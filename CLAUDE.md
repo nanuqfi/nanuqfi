@@ -77,16 +77,24 @@ packages/
   core/              → @nanuqfi/core (zero-dep interfaces, registry, router, strategy)
   backend-drift/     → @nanuqfi/backend-drift (5 Drift yield backends)
 programs/
-  allocator/         → Anchor program (14 instructions, on-chain guardrails)
+  allocator/         → Anchor program (18 instructions, on-chain guardrails + Drift CPI)
+scripts/
+  setup-devnet.ts    → Initialize allocator accounts on devnet
+  setup-drift-user.ts → Initialize Drift User for allocator PDA
+  e2e-gate.ts        → 10-step pre-mainnet E2E test (10/10 passing)
 ```
 
 **Key Files:**
 - `packages/core/src/interfaces.ts` — YieldBackend, BackendCapabilities
 - `packages/core/src/router.ts` — YieldRouter with circuit breaker
 - `packages/core/src/strategy.ts` — BaseVaultStrategy
-- `programs/allocator/src/lib.rs` — All 14 instructions
+- `packages/backend-drift/src/drift-connection.ts` — DriftClient factory with failover
+- `packages/backend-drift/src/utils/bn-convert.ts` — bigint ↔ BN conversion
+- `packages/backend-drift/src/utils/drift-data-api.ts` — Drift Data API client
+- `programs/allocator/src/lib.rs` — All 18 instructions (incl. Drift CPI + deposit cap)
 - `programs/allocator/src/state.rs` — Account structs (Allocator, RiskVault, UserPosition, etc.)
 - `docs/superpowers/specs/2026-03-15-nanuqfi-vault-strategy-design.md` — Design spec
+- `docs/superpowers/specs/2026-03-15-nanuqfi-integration-design.md` — Integration spec
 - `docs/superpowers/plans/2026-03-15-nanuqfi-implementation.md` — Implementation plan
 
 **Program ID:** `2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P`
@@ -101,7 +109,7 @@ programs/
 
 **Key Commands:**
 ```bash
-pnpm test                       # run all tests (140 tests)
+pnpm test                       # run all tests (156 tests)
 pnpm build                      # compile TypeScript
 pnpm dev                        # run with tsx (dev mode)
 docker build -t nanuqfi-keeper . # build Docker image
@@ -129,7 +137,9 @@ pnpm lint                       # ESLint
 See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 
 **Hackathon:** Ranger Build-A-Bear — deadline April 6, 2026
-**Phase:** All 5 build phases complete. Integration + deployment phase next.
+**Domain:** nanuqfi.com (app.nanuqfi.com + keeper.nanuqfi.com)
+**Phase:** Integration 18/19 tasks complete. E2E gate 10/10 passed on devnet. Next: mainnet deploy + submission.
+**Tests:** 337 total (28 core + 141 backend + 156 keeper + 12 frontend)
 
 ---
 
