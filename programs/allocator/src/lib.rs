@@ -1,4 +1,10 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::{
+  hash::hash,
+  instruction::{AccountMeta, Instruction},
+  program::invoke_signed,
+  sysvar,
+};
 use anchor_spl::token::{self, Burn, Mint, MintTo, Token, TokenAccount, Transfer};
 
 pub mod errors;
@@ -8,6 +14,22 @@ use errors::AllocatorError;
 use state::*;
 
 declare_id!("2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P");
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Drift Protocol Constants & Helpers
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Drift Protocol v2 program ID (same on devnet and mainnet).
+const DRIFT_PROGRAM_ID: Pubkey = pubkey!("dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH");
+
+/// Compute Anchor-style 8-byte discriminator for a Drift instruction.
+fn anchor_discriminator(instruction_name: &str) -> [u8; 8] {
+  let preimage = format!("global:{}", instruction_name);
+  let h = hash(preimage.as_bytes());
+  let mut disc = [0u8; 8];
+  disc.copy_from_slice(&h.to_bytes()[..8]);
+  disc
+}
 
 /// Management fee: 1% annualized.
 /// Solana produces ~2 slots/sec → ~63_072_000 slots/year.
@@ -797,61 +819,270 @@ pub mod nanuqfi_allocator {
     Ok(())
   }
 
-  // ─── 14. Allocate to Drift (Scaffold) ───────────────────────────────
+  // ─── 14. Allocate to Drift (Real CPI) ───────────────────────────────
 
   pub fn allocate_to_drift(ctx: Context<AllocateToDrift>, amount: u64) -> Result<()> {
     let allocator = &ctx.accounts.allocator;
     require!(!allocator.halted, AllocatorError::AllocatorHalted);
+    require!(amount > 0, AllocatorError::InsufficientBalance);
     require!(
       ctx.accounts.vault_usdc.amount >= amount,
       AllocatorError::InsufficientBalance
     );
 
+    // Verify the Drift program account matches the known program ID
+    require!(
+      ctx.accounts.drift_program.key() == DRIFT_PROGRAM_ID,
+      AllocatorError::DriftCpiFailed
+    );
+
+    // Build Drift `deposit` instruction data (Borsh-serialized)
+    // Args: market_index: u16, amount: u64, reduce_only: bool
+    let mut data = Vec::with_capacity(8 + 2 + 8 + 1);
+    data.extend_from_slice(&anchor_discriminator("deposit"));
+    data.extend_from_slice(&0u16.to_le_bytes()); // market_index = 0 (USDC spot)
+    data.extend_from_slice(&amount.to_le_bytes());
+    data.push(0); // reduce_only = false
+
+    // Account ordering matches Drift's Deposit context struct exactly:
+    // 1. state (read-only)
+    // 2. user (writable)
+    // 3. user_stats (writable)
+    // 4. authority (signer — our allocator PDA)
+    // 5. spot_market_vault (writable)
+    // 6. user_token_account (writable — our vault_usdc)
+    // 7. token_program (read-only)
+    let account_metas = vec![
+      AccountMeta::new_readonly(ctx.accounts.drift_state.key(), false),
+      AccountMeta::new(ctx.accounts.drift_user.key(), false),
+      AccountMeta::new(ctx.accounts.drift_user_stats.key(), false),
+      AccountMeta::new_readonly(ctx.accounts.allocator.key(), true), // PDA signer
+      AccountMeta::new(ctx.accounts.drift_spot_market_vault.key(), false),
+      AccountMeta::new(ctx.accounts.vault_usdc.key(), false),
+      AccountMeta::new_readonly(ctx.accounts.token_program.key(), false),
+    ];
+
+    let ix = Instruction {
+      program_id: DRIFT_PROGRAM_ID,
+      accounts: account_metas,
+      data,
+    };
+
     let allocator_bump = allocator.bump;
-    let signer_seeds: &[&[&[u8]]] = &[&[b"allocator".as_ref(), &[allocator_bump]]];
+    let signer_seeds: &[&[u8]] = &[b"allocator".as_ref(), &[allocator_bump]];
 
-    token::transfer(
-      CpiContext::new_with_signer(
+    invoke_signed(
+      &ix,
+      &[
+        ctx.accounts.drift_state.to_account_info(),
+        ctx.accounts.drift_user.to_account_info(),
+        ctx.accounts.drift_user_stats.to_account_info(),
+        ctx.accounts.allocator.to_account_info(),
+        ctx.accounts.drift_spot_market_vault.to_account_info(),
+        ctx.accounts.vault_usdc.to_account_info(),
         ctx.accounts.token_program.to_account_info(),
-        Transfer {
-          from: ctx.accounts.vault_usdc.to_account_info(),
-          to: ctx.accounts.drift_usdc.to_account_info(),
-          authority: ctx.accounts.allocator.to_account_info(),
-        },
-        signer_seeds,
-      ),
-      amount,
-    )?;
+        ctx.accounts.drift_program.to_account_info(),
+      ],
+      &[signer_seeds],
+    )
+    .map_err(|_| AllocatorError::DriftCpiFailed)?;
 
+    msg!("Allocated {} USDC to Drift", amount);
     Ok(())
   }
 
-  // ─── 15. Recall from Drift (Scaffold) ───────────────────────────────
+  // ─── 15. Recall from Drift (Real CPI) ───────────────────────────────
 
   pub fn recall_from_drift(ctx: Context<RecallFromDrift>, amount: u64) -> Result<()> {
     let allocator = &ctx.accounts.allocator;
     require!(!allocator.halted, AllocatorError::AllocatorHalted);
+    require!(amount > 0, AllocatorError::InsufficientBalance);
+
+    // Verify the Drift program account matches the known program ID
     require!(
-      ctx.accounts.drift_usdc.amount >= amount,
-      AllocatorError::InsufficientBalance
+      ctx.accounts.drift_program.key() == DRIFT_PROGRAM_ID,
+      AllocatorError::DriftCpiFailed
     );
 
+    // Build Drift `withdraw` instruction data (Borsh-serialized)
+    // Args: market_index: u16, amount: u64, reduce_only: bool
+    let mut data = Vec::with_capacity(8 + 2 + 8 + 1);
+    data.extend_from_slice(&anchor_discriminator("withdraw"));
+    data.extend_from_slice(&0u16.to_le_bytes()); // market_index = 0 (USDC spot)
+    data.extend_from_slice(&amount.to_le_bytes());
+    data.push(0); // reduce_only = false
+
+    // Account ordering matches Drift's Withdraw context struct exactly:
+    // 1. state (read-only)
+    // 2. user (writable, has_one = authority)
+    // 3. user_stats (writable, has_one = authority)
+    // 4. authority (signer — our allocator PDA)
+    // 5. spot_market_vault (writable)
+    // 6. drift_signer (read-only — Drift's PDA that signs vault transfers)
+    // 7. user_token_account (writable — our vault_usdc, receives withdrawn funds)
+    // 8. token_program (read-only)
+    let account_metas = vec![
+      AccountMeta::new_readonly(ctx.accounts.drift_state.key(), false),
+      AccountMeta::new(ctx.accounts.drift_user.key(), false),
+      AccountMeta::new(ctx.accounts.drift_user_stats.key(), false),
+      AccountMeta::new_readonly(ctx.accounts.allocator.key(), true), // PDA signer
+      AccountMeta::new(ctx.accounts.drift_spot_market_vault.key(), false),
+      AccountMeta::new_readonly(ctx.accounts.drift_signer.key(), false),
+      AccountMeta::new(ctx.accounts.vault_usdc.key(), false),
+      AccountMeta::new_readonly(ctx.accounts.token_program.key(), false),
+    ];
+
+    let ix = Instruction {
+      program_id: DRIFT_PROGRAM_ID,
+      accounts: account_metas,
+      data,
+    };
+
     let allocator_bump = allocator.bump;
-    let signer_seeds: &[&[&[u8]]] = &[&[b"allocator".as_ref(), &[allocator_bump]]];
+    let signer_seeds: &[&[u8]] = &[b"allocator".as_ref(), &[allocator_bump]];
 
-    token::transfer(
-      CpiContext::new_with_signer(
+    invoke_signed(
+      &ix,
+      &[
+        ctx.accounts.drift_state.to_account_info(),
+        ctx.accounts.drift_user.to_account_info(),
+        ctx.accounts.drift_user_stats.to_account_info(),
+        ctx.accounts.allocator.to_account_info(),
+        ctx.accounts.drift_spot_market_vault.to_account_info(),
+        ctx.accounts.drift_signer.to_account_info(),
+        ctx.accounts.vault_usdc.to_account_info(),
         ctx.accounts.token_program.to_account_info(),
-        Transfer {
-          from: ctx.accounts.drift_usdc.to_account_info(),
-          to: ctx.accounts.vault_usdc.to_account_info(),
-          authority: ctx.accounts.allocator.to_account_info(),
-        },
-        signer_seeds,
-      ),
-      amount,
-    )?;
+        ctx.accounts.drift_program.to_account_info(),
+      ],
+      &[signer_seeds],
+    )
+    .map_err(|_| AllocatorError::DriftCpiFailed)?;
 
+    msg!("Recalled {} USDC from Drift", amount);
+    Ok(())
+  }
+
+  // ─── 16. Initialize Drift Account (One-Time Setup) ───────────────────
+
+  /// Initializes a Drift User account and UserStats for the allocator PDA.
+  /// This is a one-time setup instruction called by the admin after the
+  /// allocator is initialized. The allocator PDA becomes the "authority"
+  /// on the Drift User account, and the keeper is later set as delegate.
+  ///
+  /// Two CPIs are made:
+  /// 1. `initialize_user_stats` — creates UserStats PDA for allocator
+  /// 2. `initialize_user` — creates User PDA for allocator (sub_account 0)
+  pub fn initialize_drift_account(
+    ctx: Context<InitializeDriftAccount>,
+    sub_account_id: u16,
+  ) -> Result<()> {
+    // Verify the Drift program account matches the known program ID
+    require!(
+      ctx.accounts.drift_program.key() == DRIFT_PROGRAM_ID,
+      AllocatorError::DriftCpiFailed
+    );
+
+    let allocator_bump = ctx.accounts.allocator.bump;
+    let signer_seeds: &[&[u8]] = &[b"allocator".as_ref(), &[allocator_bump]];
+
+    // ── CPI 1: initialize_user_stats ──────────────────────────────────
+    {
+      let mut data = Vec::with_capacity(8);
+      data.extend_from_slice(&anchor_discriminator("initialize_user_stats"));
+
+      // Accounts for InitializeUserStats:
+      // 1. user_stats (writable — PDA to be init'd)
+      // 2. state (writable)
+      // 3. authority (allocator PDA — not signer in Drift, but we pass it)
+      // 4. payer (signer, writable — admin pays rent)
+      // 5. rent sysvar
+      // 6. system_program
+      let account_metas = vec![
+        AccountMeta::new(ctx.accounts.drift_user_stats.key(), false),
+        AccountMeta::new(ctx.accounts.drift_state.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.allocator.key(), true),
+        AccountMeta::new(ctx.accounts.admin.key(), true),
+        AccountMeta::new_readonly(sysvar::rent::ID, false),
+        AccountMeta::new_readonly(ctx.accounts.system_program.key(), false),
+      ];
+
+      let ix = Instruction {
+        program_id: DRIFT_PROGRAM_ID,
+        accounts: account_metas,
+        data,
+      };
+
+      invoke_signed(
+        &ix,
+        &[
+          ctx.accounts.drift_user_stats.to_account_info(),
+          ctx.accounts.drift_state.to_account_info(),
+          ctx.accounts.allocator.to_account_info(),
+          ctx.accounts.admin.to_account_info(),
+          ctx.accounts.rent.to_account_info(),
+          ctx.accounts.system_program.to_account_info(),
+          ctx.accounts.drift_program.to_account_info(),
+        ],
+        &[signer_seeds],
+      )
+      .map_err(|_| AllocatorError::DriftCpiFailed)?;
+    }
+
+    // ── CPI 2: initialize_user ────────────────────────────────────────
+    {
+      let mut data = Vec::with_capacity(8 + 2 + 32);
+      data.extend_from_slice(&anchor_discriminator("initialize_user"));
+      data.extend_from_slice(&sub_account_id.to_le_bytes());
+      // name: [u8; 32] — "nanuqfi" padded with zeros
+      let mut name = [0u8; 32];
+      name[..7].copy_from_slice(b"nanuqfi");
+      data.extend_from_slice(&name);
+
+      // Accounts for InitializeUser:
+      // 1. user (writable — PDA to be init'd)
+      // 2. user_stats (writable, has_one = authority)
+      // 3. state (writable)
+      // 4. authority (allocator PDA)
+      // 5. payer (signer, writable — admin pays rent)
+      // 6. rent sysvar
+      // 7. system_program
+      let account_metas = vec![
+        AccountMeta::new(ctx.accounts.drift_user.key(), false),
+        AccountMeta::new(ctx.accounts.drift_user_stats.key(), false),
+        AccountMeta::new(ctx.accounts.drift_state.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.allocator.key(), true),
+        AccountMeta::new(ctx.accounts.admin.key(), true),
+        AccountMeta::new_readonly(sysvar::rent::ID, false),
+        AccountMeta::new_readonly(ctx.accounts.system_program.key(), false),
+      ];
+
+      let ix = Instruction {
+        program_id: DRIFT_PROGRAM_ID,
+        accounts: account_metas,
+        data,
+      };
+
+      invoke_signed(
+        &ix,
+        &[
+          ctx.accounts.drift_user.to_account_info(),
+          ctx.accounts.drift_user_stats.to_account_info(),
+          ctx.accounts.drift_state.to_account_info(),
+          ctx.accounts.allocator.to_account_info(),
+          ctx.accounts.admin.to_account_info(),
+          ctx.accounts.rent.to_account_info(),
+          ctx.accounts.system_program.to_account_info(),
+          ctx.accounts.drift_program.to_account_info(),
+        ],
+        &[signer_seeds],
+      )
+      .map_err(|_| AllocatorError::DriftCpiFailed)?;
+    }
+
+    msg!(
+      "Drift account initialized for allocator PDA (sub_account {})",
+      sub_account_id
+    );
     Ok(())
   }
 }
@@ -1276,10 +1507,22 @@ pub struct AllocateToDrift<'info> {
   pub risk_vault: Account<'info, RiskVault>,
   #[account(constraint = keeper.key() == allocator.keeper_authority @ AllocatorError::UnauthorizedKeeper)]
   pub keeper: Signer<'info>,
+  /// Vault's USDC token account (source — funds flow to Drift)
   #[account(mut)]
   pub vault_usdc: Account<'info, TokenAccount>,
+  /// CHECK: Drift State account, validated by Drift program during CPI
+  pub drift_state: UncheckedAccount<'info>,
+  /// CHECK: Drift User account owned by allocator PDA, validated by Drift
   #[account(mut)]
-  pub drift_usdc: Account<'info, TokenAccount>,
+  pub drift_user: UncheckedAccount<'info>,
+  /// CHECK: Drift UserStats account for allocator PDA, validated by Drift
+  #[account(mut)]
+  pub drift_user_stats: UncheckedAccount<'info>,
+  /// CHECK: Drift's USDC spot market vault (destination), validated by Drift
+  #[account(mut)]
+  pub drift_spot_market_vault: UncheckedAccount<'info>,
+  /// CHECK: Drift program — verified against DRIFT_PROGRAM_ID constant
+  pub drift_program: UncheckedAccount<'info>,
   pub token_program: Program<'info, Token>,
 }
 
@@ -1291,9 +1534,51 @@ pub struct RecallFromDrift<'info> {
   pub risk_vault: Account<'info, RiskVault>,
   #[account(constraint = keeper.key() == allocator.keeper_authority @ AllocatorError::UnauthorizedKeeper)]
   pub keeper: Signer<'info>,
+  /// Vault's USDC token account (destination — receives recalled funds)
   #[account(mut)]
   pub vault_usdc: Account<'info, TokenAccount>,
+  /// CHECK: Drift State account, validated by Drift program during CPI
+  pub drift_state: UncheckedAccount<'info>,
+  /// CHECK: Drift User account owned by allocator PDA, validated by Drift
   #[account(mut)]
-  pub drift_usdc: Account<'info, TokenAccount>,
+  pub drift_user: UncheckedAccount<'info>,
+  /// CHECK: Drift UserStats account for allocator PDA, validated by Drift
+  #[account(mut)]
+  pub drift_user_stats: UncheckedAccount<'info>,
+  /// CHECK: Drift's USDC spot market vault (source for withdrawal)
+  #[account(mut)]
+  pub drift_spot_market_vault: UncheckedAccount<'info>,
+  /// CHECK: Drift's signer PDA — signs vault token transfers.
+  /// Derived as PDA(["drift_signer"], DRIFT_PROGRAM_ID).
+  pub drift_signer: UncheckedAccount<'info>,
+  /// CHECK: Drift program — verified against DRIFT_PROGRAM_ID constant
+  pub drift_program: UncheckedAccount<'info>,
   pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+pub struct InitializeDriftAccount<'info> {
+  #[account(
+    seeds = [b"allocator"],
+    bump = allocator.bump,
+    has_one = admin @ AllocatorError::UnauthorizedAdmin,
+  )]
+  pub allocator: Account<'info, Allocator>,
+  #[account(mut)]
+  pub admin: Signer<'info>,
+  /// CHECK: Drift State account, validated by Drift during CPI
+  #[account(mut)]
+  pub drift_state: UncheckedAccount<'info>,
+  /// CHECK: Drift User PDA to be initialized.
+  /// Derived as PDA(["user", allocator_pda, sub_account_id], DRIFT_PROGRAM_ID)
+  #[account(mut)]
+  pub drift_user: UncheckedAccount<'info>,
+  /// CHECK: Drift UserStats PDA to be initialized.
+  /// Derived as PDA(["user_stats", allocator_pda], DRIFT_PROGRAM_ID)
+  #[account(mut)]
+  pub drift_user_stats: UncheckedAccount<'info>,
+  /// CHECK: Drift program — verified against DRIFT_PROGRAM_ID constant
+  pub drift_program: UncheckedAccount<'info>,
+  pub rent: Sysvar<'info, Rent>,
+  pub system_program: Program<'info, System>,
 }
