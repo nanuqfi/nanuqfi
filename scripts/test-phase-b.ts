@@ -380,10 +380,10 @@ async function b19_rebalanceValid(): Promise<void> {
   }
 }
 
-// ─── B20: Rebalance with Invalid Weights ───────────────────────────────────
+// ─── B20ab: Weight Validation (must run BEFORE B19 to avoid cooldown) ───────
 
-async function b20_rebalanceInvalid(): Promise<void> {
-  console.log('\nB20: Rebalance with Invalid Weights')
+async function b20ab_weightValidation(): Promise<void> {
+  console.log('\nB20a/b: Weight Validation (pre-rebalance)')
 
   const moderateVault = getRiskVaultPDA(1)
 
@@ -437,7 +437,7 @@ async function b20_rebalanceInvalid(): Promise<void> {
       if (err.message?.includes('InvalidWeightSum') || err.message?.includes('6000')) {
         record('B20a: Invalid weight sum', 'pass', 'Correctly rejected: InvalidWeightSum')
       } else if (err.message?.includes('RebalanceTooSoon') || err.message?.includes('6003')) {
-        record('B20a: Invalid weight sum', 'skip', 'RebalanceTooSoon fires before weight validation')
+        record('B20a: Invalid weight sum', 'skip', 'RebalanceTooSoon fires before weight validation — wait ~75min')
       } else {
         record('B20a: Invalid weight sum', 'pass', `Rejected with: ${err.message?.slice(0, 80)}`)
       }
@@ -471,49 +471,70 @@ async function b20_rebalanceInvalid(): Promise<void> {
       if (err.message?.includes('WeightExceedsMax') || err.message?.includes('6001')) {
         record('B20b: Weight exceeds max', 'pass', 'Correctly rejected: WeightExceedsMax')
       } else if (err.message?.includes('RebalanceTooSoon') || err.message?.includes('6003')) {
-        record('B20b: Weight exceeds max', 'skip', 'RebalanceTooSoon fires before weight validation')
+        record('B20b: Weight exceeds max', 'skip', 'RebalanceTooSoon fires before weight validation — wait ~75min')
       } else {
         record('B20b: Weight exceeds max', 'pass', `Rejected with: ${err.message?.slice(0, 80)}`)
       }
     }
   }
+}
 
-  // B20c: Rebalance too soon (immediately after B19)
-  {
-    const validWeights = [2000, 2000, 2000, 2000, 2000]
-    // Re-read counter in case B19 succeeded
-    try {
-      const vaultData = await program.account.riskVault.fetch(moderateVault)
-      rebalanceCounter = vaultData.rebalanceCounter
-    } catch {
-      // Use existing counter
-    }
-    const rebalanceRecord = getRebalanceRecordPDA(moderateVault, rebalanceCounter)
+// ─── B20c: Rebalance Too Soon (must run AFTER B19) ──────────────────────────
 
-    try {
-      await keeperProgram.methods
-        .rebalance(validWeights, new BN(equitySnapshot), Buffer.from(aiReasoningHash))
-        .accounts({
-          allocator: allocatorPDA,
-          riskVault: moderateVault,
-          rebalanceRecord,
-          treasury: treasuryPDA,
-          vaultUsdc,
-          treasuryUsdc: treasuryUsdcAccount,
-          keeperAuthority: keeperWallet.publicKey,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SystemProgram.programId,
-        })
-        .rpc()
+async function b20c_rebalanceTooSoon(): Promise<void> {
+  console.log('\nB20c: Rebalance Too Soon (post-rebalance)')
 
-      // If B19 was skipped (no prior rebalance), this might succeed
-      record('B20c: Rebalance too soon', 'skip', 'Rebalance succeeded (no prior rebalance within interval)')
-    } catch (err: any) {
-      if (err.message?.includes('RebalanceTooSoon') || err.message?.includes('6003')) {
-        record('B20c: Rebalance too soon', 'pass', 'Correctly rejected: RebalanceTooSoon')
-      } else {
-        record('B20c: Rebalance too soon', 'pass', `Rejected with: ${err.message?.slice(0, 80)}`)
-      }
+  const moderateVault = getRiskVaultPDA(1)
+
+  let rebalanceCounter: number
+  let totalAssets: number
+  try {
+    const vaultData = await program.account.riskVault.fetch(moderateVault)
+    rebalanceCounter = vaultData.rebalanceCounter
+    totalAssets = Number(vaultData.totalAssets)
+  } catch (err: any) {
+    record('B20c: Rebalance too soon', 'fail', `Cannot read vault: ${err.message}`)
+    return
+  }
+
+  let treasuryUsdcAccount: PublicKey
+  try {
+    const treasuryData = await program.account.treasury.fetch(treasuryPDA)
+    treasuryUsdcAccount = treasuryData.usdcTokenAccount as PublicKey
+  } catch (err: any) {
+    record('B20c: Rebalance too soon', 'fail', `Cannot read treasury: ${err.message}`)
+    return
+  }
+
+  const vaultUsdc = await getAssociatedTokenAddress(USDC_MINT, allocatorPDA, true)
+  const equitySnapshot = totalAssets > 0 ? totalAssets : 0
+  const aiReasoningHash = Array.from(Buffer.alloc(32, 0xab))
+
+  const validWeights = [2000, 2000, 2000, 2000, 2000]
+  const rebalanceRecord = getRebalanceRecordPDA(moderateVault, rebalanceCounter)
+
+  try {
+    await keeperProgram.methods
+      .rebalance(validWeights, new BN(equitySnapshot), Buffer.from(aiReasoningHash))
+      .accounts({
+        allocator: allocatorPDA,
+        riskVault: moderateVault,
+        rebalanceRecord,
+        treasury: treasuryPDA,
+        vaultUsdc,
+        treasuryUsdc: treasuryUsdcAccount,
+        keeperAuthority: keeperWallet.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc()
+
+    record('B20c: Rebalance too soon', 'skip', 'Rebalance succeeded (no prior rebalance within interval)')
+  } catch (err: any) {
+    if (err.message?.includes('RebalanceTooSoon') || err.message?.includes('6003')) {
+      record('B20c: Rebalance too soon', 'pass', 'Correctly rejected: RebalanceTooSoon')
+    } else {
+      record('B20c: Rebalance too soon', 'pass', `Rejected with: ${err.message?.slice(0, 80)}`)
     }
   }
 }
@@ -600,11 +621,15 @@ async function main(): Promise<void> {
     process.exit(1)
   }
 
-  // Run tests sequentially
+  // Run tests sequentially — ORDER MATTERS for rebalance tests:
+  // 1. B20a/b first (weight validation while no cooldown)
+  // 2. B19 (valid rebalance — sets last_rebalance_slot)
+  // 3. B20c immediately after (RebalanceTooSoon)
   await b17_updateDepositCap()
   await b18_updateKeeperAuthority()
-  await b19_rebalanceValid()
-  await b20_rebalanceInvalid()
+  await b20ab_weightValidation()  // Weight errors before any cooldown
+  await b19_rebalanceValid()      // Valid rebalance — triggers cooldown
+  await b20c_rebalanceTooSoon()   // Must fire immediately after B19
   await b21_b22_driftCpi()
 
   // Summary

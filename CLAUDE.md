@@ -77,11 +77,13 @@ packages/
   core/              → @nanuqfi/core (zero-dep interfaces, registry, router, strategy)
   backend-drift/     → @nanuqfi/backend-drift (5 Drift yield backends)
 programs/
-  allocator/         → Anchor program (18 instructions, on-chain guardrails + Drift CPI)
+  allocator/         → Anchor program (22 instructions, on-chain guardrails + Drift CPI + admin utils)
 scripts/
   setup-devnet.ts    → Initialize allocator accounts on devnet
   setup-drift-user.ts → Initialize Drift User for allocator PDA
   e2e-gate.ts        → 10-step pre-mainnet E2E test (10/10 passing)
+  fix-treasury-usdc.ts → Fix treasury USDC mint mismatch (B19 fix)
+  test-phase-b.ts    → Phase B extended on-chain tests (B17-B22)
 ```
 
 **Key Files:**
@@ -91,7 +93,7 @@ scripts/
 - `packages/backend-drift/src/drift-connection.ts` — DriftClient factory with failover
 - `packages/backend-drift/src/utils/bn-convert.ts` — bigint ↔ BN conversion
 - `packages/backend-drift/src/utils/drift-data-api.ts` — Drift Data API client
-- `programs/allocator/src/lib.rs` — All 18 instructions (incl. Drift CPI + deposit cap)
+- `programs/allocator/src/lib.rs` — All 22 instructions (incl. Drift CPI + deposit cap + admin utils)
 - `programs/allocator/src/state.rs` — Account structs (Allocator, RiskVault, UserPosition, etc.)
 - `docs/superpowers/specs/2026-03-15-nanuqfi-vault-strategy-design.md` — Design spec
 - `docs/superpowers/specs/2026-03-15-nanuqfi-integration-design.md` — Integration spec
@@ -138,8 +140,9 @@ See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 
 **Hackathon:** Ranger Build-A-Bear — deadline April 6, 2026
 **Domain:** nanuqfi.com (app.nanuqfi.com + keeper.nanuqfi.com)
-**Phase:** Integration 18/19 tasks complete. E2E gate 10/10 passed on devnet. Next: mainnet deploy + submission.
-**Tests:** 337 total (28 core + 141 backend + 156 keeper + 12 frontend)
+**Phase:** Phase D in progress (5/26 pass). A-C complete. Next: vault detail + deposit/withdraw testing.
+**Tests:** 364 total (28 core + 141 backend + 183 keeper + 12 frontend)
+**Program:** 22 instructions (18 core + 4 admin utilities)
 
 ---
 
@@ -167,7 +170,7 @@ The core monorepo publishes two npm packages and one Anchor program:
 - `DriftJitoDNBackend` — JitoSOL delta-neutral with borrow rate auto-exit
 
 ### Allocator Program (Anchor/Rust)
-14 instructions: initialize_allocator, initialize_risk_vault, initialize_treasury, deposit, request_withdraw, withdraw, rebalance, emergency_halt, resume, update_keeper_authority, update_guardrails, acquire_lease, heartbeat, withdraw_treasury
+22 instructions: initialize_allocator, initialize_risk_vault, initialize_treasury, deposit, request_withdraw, withdraw, rebalance, emergency_halt, resume, update_keeper_authority, update_guardrails, acquire_lease, heartbeat, withdraw_treasury, initialize_drift_account, allocate_to_drift, recall_from_drift, update_deposit_cap, update_treasury_usdc, admin_reset_vault, admin_set_rebalance_counter
 
 **Trust model:** Users trust the on-chain program (auditable), not the keeper. Keeper proposes → algorithm validates → program enforces.
 

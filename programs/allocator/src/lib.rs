@@ -825,6 +825,42 @@ pub mod nanuqfi_allocator {
     Ok(())
   }
 
+  /// Admin-only: reset vault accounting to clean state (devnet testing utility).
+  /// Zeroes shares, assets, peak equity, timing. Preserves rebalance_counter
+  /// (on-chain RebalanceRecord PDAs are keyed by counter, so resetting would collide).
+  pub fn admin_reset_vault(ctx: Context<AdminResetVault>) -> Result<()> {
+    let vault = &mut ctx.accounts.risk_vault;
+    let clock = Clock::get()?;
+    vault.total_shares = 0;
+    vault.total_assets = 0;
+    vault.peak_equity = 0;
+    vault.current_equity = 0;
+    vault.equity_24h_ago = 0;
+    vault.last_rebalance_slot = 0;
+    // NOTE: rebalance_counter is NOT reset — existing RebalanceRecord PDAs would collide
+    vault.last_mgmt_fee_slot = clock.slot;
+    vault.current_weights = vec![];
+    Ok(())
+  }
+
+  /// Admin-only: set allocator total_tvl to match actual vault totals.
+  pub fn admin_set_tvl(ctx: Context<AdminSetTvl>, tvl: u64) -> Result<()> {
+    ctx.accounts.allocator.total_tvl = tvl;
+    Ok(())
+  }
+
+  /// Admin-only: override redemption period (devnet testing — bypasses safety check).
+  pub fn admin_set_redemption_period(ctx: Context<AdminResetVault>, slots: u64) -> Result<()> {
+    ctx.accounts.risk_vault.redemption_period_slots = slots;
+    Ok(())
+  }
+
+  /// Admin-only: set rebalance counter to skip past existing RebalanceRecord PDAs.
+  pub fn admin_set_rebalance_counter(ctx: Context<AdminResetVault>, counter: u32) -> Result<()> {
+    ctx.accounts.risk_vault.rebalance_counter = counter;
+    Ok(())
+  }
+
   // ─── 14. Allocate to Drift (Real CPI) ───────────────────────────────
 
   pub fn allocate_to_drift(ctx: Context<AllocateToDrift>, amount: u64) -> Result<()> {
@@ -1506,6 +1542,14 @@ pub struct UpdateDepositCap<'info> {
 }
 
 #[derive(Accounts)]
+pub struct AdminSetTvl<'info> {
+  #[account(mut, seeds = [b"allocator"], bump = allocator.bump)]
+  pub allocator: Account<'info, Allocator>,
+  #[account(constraint = admin.key() == allocator.admin @ AllocatorError::UnauthorizedAdmin)]
+  pub admin: Signer<'info>,
+}
+
+#[derive(Accounts)]
 pub struct UpdateTreasuryUsdc<'info> {
   #[account(seeds = [b"allocator"], bump = allocator.bump)]
   pub allocator: Account<'info, Allocator>,
@@ -1517,6 +1561,19 @@ pub struct UpdateTreasuryUsdc<'info> {
   )]
   pub treasury: Account<'info, Treasury>,
   pub new_treasury_usdc: Account<'info, TokenAccount>,
+  #[account(constraint = admin.key() == allocator.admin @ AllocatorError::UnauthorizedAdmin)]
+  pub admin: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct AdminResetVault<'info> {
+  #[account(seeds = [b"allocator"], bump = allocator.bump)]
+  pub allocator: Account<'info, Allocator>,
+  #[account(
+    mut,
+    constraint = risk_vault.allocator == allocator.key(),
+  )]
+  pub risk_vault: Account<'info, RiskVault>,
   #[account(constraint = admin.key() == allocator.admin @ AllocatorError::UnauthorizedAdmin)]
   pub admin: Signer<'info>,
 }
