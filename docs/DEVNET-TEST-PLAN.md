@@ -318,9 +318,9 @@ Test the deploy pipeline and VPS operations.
 
 ### CI/CD
 
-- [ ] **E8.** Push to `nanuqfi/nanuqfi` main → CI tests pass on GitHub Actions
-- [ ] **E9.** Push to `nanuqfi/nanuqfi-keeper` main → Docker build + deploy to VPS
-- [ ] **E10.** Push to `nanuqfi/nanuqfi-app` main → Docker build + deploy to VPS
+- [x] **E8.** Push to `nanuqfi/nanuqfi` main → CI tests pass on GitHub Actions
+- [x] **E9.** Push to `nanuqfi/nanuqfi-keeper` main → Docker build + push to GHCR (VPS deploy pending — VPS unreachable)
+- [x] **E10.** Push to `nanuqfi/nanuqfi-app` main → Docker build + push to GHCR (VPS deploy pending — VPS unreachable)
 
 ### DNS & SSL
 
@@ -373,9 +373,9 @@ Everything running together on devnet.
 | B: On-Chain Program | 22 | 20 | 0 | 2 | COMPLETE — B21-22 acceptable skip (need Drift devnet USDC) |
 | C: Keeper Bot | 20 | 23 | 0 | 0 | COMPLETE (exceeded target) |
 | D: Frontend | 26 | 22 | 0 | 2 | COMPLETE — D5 not impl, D21/D26 deferred |
-| E: Infrastructure | 20 | 6 | 0 | 2 | E1-E2 need local Docker, rest pending VPS deploy |
+| E: Infrastructure | 20 | 9 | 0 | 2 | E8-E10 CI builds pass, VPS unreachable — needs investigation |
 | F: End-to-End | 13 | 0 | 0 | 0 | PENDING — needs all systems running |
-| **Total** | **107** | **77** | **0** | **6** | **72% complete** |
+| **Total** | **107** | **80** | **0** | **6** | **75% complete** |
 
 **Mainnet gate:** ALL tests must pass (or have documented acceptable SKIPs) before mainnet.
 
@@ -445,13 +445,26 @@ Everything running together on devnet.
 - Hydration mismatch from wallet adapter → mounted guard in `SolanaProvider`
 - Stale allocator `total_tvl` → added `admin_set_tvl` instruction, synced to vault totals
 
+### Phase E: 9 pass, 0 fail — BLOCKED (2026-03-24)
+- E8: Core repo CI passes (pnpm install, build, test)
+- E9: Keeper Docker multi-stage build + push to GHCR works
+- E10: App Docker build + push to GHCR works
+- E11-E14: DNS + SSL verified from earlier session
+- GitHub secrets set: VPS_HOST, VPS_USER, VPS_SSH_KEY, VPS_APP_PATH (both repos)
+- Deploy key generated: `~/.ssh/github_actions_nanuqfi`
+- **BLOCKER:** VPS 151.245.137.75 unreachable (100% packet loss). Deploy step fails with "missing server host". Need to investigate VPS status.
+- E1-E4: Local Docker builds skipped (Colima not running)
+- E5-E7: VPS SSH tests blocked (VPS unreachable)
+- E15-E20: Live VPS tests blocked
+
 ### Program Changes (2026-03-23/24)
 - Added `update_treasury_usdc` admin instruction (fix B19 mint mismatch)
 - Added `admin_reset_vault` admin instruction (devnet testing utility)
 - Added `admin_set_rebalance_counter` admin instruction (devnet counter management)
 - Added `admin_set_tvl` admin instruction (sync allocator TVL)
-- Total instructions: 22 (18 original + 4 admin utilities)
+- Added `admin_set_redemption_period` admin instruction (devnet testing)
+- Total instructions: 23 (18 original + 5 admin utilities)
 
 ---
 
-**Last Updated:** 2026-03-24 12:50 UTC+7
+**Last Updated:** 2026-03-24 13:45 UTC+7
