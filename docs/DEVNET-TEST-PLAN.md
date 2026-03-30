@@ -339,8 +339,15 @@ Everything running together on devnet.
   - SSR renders correctly, real on-chain TVL ($200 USDC) displayed
   - Container: nanuqfi-app (ghcr.io/nanuqfi/nanuqfi-app:main)
 
-- [ ] **F3.** Connect Phantom wallet (devnet) on frontend
-- [ ] **F4.** Deposit USDC via frontend → shares appear in vault detail
+- [x] **F3.** Connect Phantom wallet (devnet) on frontend
+  - Wallet HciZ..25En connected, address shows in nav
+  - Phantom detected + approved connection to app.nanuqfi.com
+
+- [x] **F4.** Deposit USDC via frontend → shares appear in vault detail
+  - Deposited 10 USDC into moderate vault via Phantom
+  - TVL updated $200 → $210, "Your Position" appeared: $10 value, 10.01 shares
+  - Balance updated $150 → $140
+  - "Deposit confirmed. Refreshing..." success banner shown
 - [x] **F5.** Keeper cycle runs → decisions visible in activity page
   - Live decisions: "78.3% Lending, 21.7% Jito DN" — real algorithm engine output
   - Fixed: per-vault decisions endpoint wired to real keeper data (was returning [])
@@ -351,8 +358,15 @@ Everything running together on devnet.
   - 50 protocols scanned via DeFi Llama, top 5 opportunities displayed
   - Drift comparison: rank, best APY, market best APY
 
-- [ ] **F7.** Request withdrawal via frontend → countdown shows
-- [ ] **F8.** Complete withdrawal → USDC returned to wallet
+- [x] **F7.** Request withdrawal via frontend → countdown shows
+  - "Pending withdrawal: 10.01 shares" orange banner appeared
+  - "Complete Withdrawal" button shown after request confirmed
+  - "Transaction confirmed. Refreshing..." success banner
+
+- [x] **F8.** Complete withdrawal → USDC returned to wallet
+  - Phantom showed: +9.999993 USDC, -10.010474 shares
+  - Solscan confirms: balance 149.99 USDC (140 + ~10 returned)
+  - Shares burned, position zeroed out
 - [x] **F9.** Emergency halt (via script) → frontend shows "halted" banner
   - Red "Protocol Halted" banner on dashboard when allocator.halted = true
   - halt tx: 2Xc5qAzYcEJRFq7jMeK4Gm8yKvXDxTpewZZs2y6JMM4v7hwuApXdXByKY9NhAzGJEqb5Sza41428o7zNxFJdhDhf
@@ -390,8 +404,8 @@ Everything running together on devnet.
 | C: Keeper Bot | 20 | 23 | 0 | 0 | COMPLETE (exceeded target) |
 | D: Frontend | 26 | 22 | 0 | 2 | COMPLETE — D5 not impl, D21/D26 deferred |
 | E: Infrastructure | 20 | 18 | 0 | 2 | COMPLETE — both containers live on VPS |
-| F: End-to-End | 13 | 9 | 0 | 0 | IN PROGRESS — 4 remaining (wallet tests F3/F4/F7/F8) |
-| **Total** | **107** | **98** | **0** | **6** | **92% complete** |
+| F: End-to-End | 13 | 13 | 0 | 0 | COMPLETE — all 13 pass |
+| **Total** | **107** | **102** | **0** | **5** | **95% complete** |
 
 **Mainnet gate:** ALL tests must pass (or have documented acceptable SKIPs) before mainnet.
 
@@ -481,7 +495,7 @@ Everything running together on devnet.
 - Added `admin_set_redemption_period` admin instruction (devnet testing)
 - Total instructions: 23 (18 original + 5 admin utilities)
 
-### Phase F: 9 pass, 0 fail, 4 pending — IN PROGRESS (2026-03-28)
+### Phase F: 13 pass, 0 fail — COMPLETE (2026-03-30)
 - F1-F2: Keeper + frontend live on VPS, both containers healthy
 - F5: Live keeper decisions in Activity page (78.3% Lending, 21.7% Jito DN)
 - F6: DeFi Yield Scanner: 50 protocols scanned, top opportunities displayed
@@ -489,7 +503,10 @@ Everything running together on devnet.
 - F11: Docker healthchecks (node-based) + background monitor every 5 min
 - F12: 49.5h continuous runtime, 0 crashes
 - F13: Stable ~109MB RSS, no memory leak
-- F3/F4/F7/F8: PENDING — require Phantom wallet interaction on live frontend
+- F3: Phantom wallet connected (HciZ..25En)
+- F4: Deposited 10 USDC → TVL $200→$210, shares minted
+- F7: Withdrawal requested → pending state, 10.01 shares
+- F8: Withdrawal completed → 149.99 USDC in wallet (Solscan verified)
 
 ### Phase F Fixes (2026-03-28)
 - Keeper `main.ts`: `getDecisions` was hardcoded `() => []` → now filters real keeper decisions by riskLevel and transforms to DecisionLog shape
@@ -504,4 +521,10 @@ Everything running together on devnet.
 
 ---
 
-**Last Updated:** 2026-03-28 12:10 UTC+7
+### Infrastructure Fixes (2026-03-30)
+- Dockerfile: bake NEXT_PUBLIC_* env vars at build time (ARG → ENV before pnpm build)
+- CI: pass `NEXT_PUBLIC_RPC_URL` as build-arg from GitHub secret (Helius devnet RPC)
+- Fixed: public devnet RPC 429 rate limiting — switched to Helius devnet endpoint
+- Fixed: USDC balance showing $0 on deployed app (mainnet USDC fallback vs test mint)
+
+**Last Updated:** 2026-03-30 16:10 UTC+7
