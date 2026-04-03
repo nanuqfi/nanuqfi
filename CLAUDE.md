@@ -19,6 +19,7 @@ NanuqFi is a protocol-agnostic, AI-powered yield routing layer for DeFi. Users d
 | `nanuqfi/nanuqfi` | **Core monorepo** — SDK packages + Anchor program | TypeScript, Rust/Anchor, pnpm + Turborepo | `~/local-dev/nanuqfi/` |
 | `nanuqfi/nanuqfi-keeper` | **AI Keeper** — strategy bot with algorithm engine + Claude AI | TypeScript, Anthropic SDK | `~/local-dev/nanuqfi-keeper/` |
 | `nanuqfi/nanuqfi-app` | **Frontend** — dashboard with transparency UI | Next.js 15, Tailwind 4, React 19 | `~/local-dev/nanuqfi-app/` |
+| `nanuqfi/nanuqfi-web` | **Marketing site** — landing page at nanuqfi.com | Next.js 16 (static export), Tailwind 4 | `~/local-dev/nanuqfi-web/` |
 
 **Organization Mission:** Build the yield routing layer for DeFi — transparent, trustless, AI-enhanced.
 
@@ -139,9 +140,9 @@ pnpm lint                       # ESLint
 See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 
 **Hackathon:** Ranger Build-A-Bear — deadline April 6, 2026
-**Domain:** nanuqfi.com (app.nanuqfi.com + keeper.nanuqfi.com)
+**Domain:** nanuqfi.com (marketing) + app.nanuqfi.com (dashboard) + keeper.nanuqfi.com (API)
 **Phase:** Phase D in progress (5/26 pass). A-C complete. Next: vault detail + deposit/withdraw testing.
-**Tests:** 364 total (28 core + 141 backend + 183 keeper + 12 frontend)
+**Tests:** 379 total (28 core + 141 backend + 183 keeper + 12 frontend + 15 marketing)
 **Program:** 22 instructions (18 core + 4 admin utilities)
 
 ---
