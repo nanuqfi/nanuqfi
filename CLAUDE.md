@@ -78,6 +78,7 @@ packages/
   core/              → @nanuqfi/core (zero-dep interfaces, registry, router, strategy)
   backend-drift/     → @nanuqfi/backend-drift (5 Drift yield backends)
   backend-marginfi/  → @nanuqfi/backend-marginfi (Marginfi lending stub — protocol-agnostic proof)
+  backend-kamino/    → @nanuqfi/backend-kamino (Kamino USDC lending — zero-dep REST API)
 programs/
   allocator/         → Anchor program (22 instructions, on-chain guardrails + Drift CPI + admin utils)
 scripts/
@@ -143,7 +144,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 **Hackathon:** Ranger Build-A-Bear — deadline April 17, 2026
 **Domain:** nanuqfi.com (marketing) + app.nanuqfi.com (dashboard) + keeper.nanuqfi.com (API)
 **Phase:** All phases complete. Strategy, risk, technical, production, novelty — all shipped.
-**Tests:** 459 total (28 core + 141 backend-drift + 29 backend-marginfi + 249 keeper + 12 frontend)
+**Tests:** 479 total (28 core + 141 backend-drift + 29 backend-marginfi + 20 backend-kamino + 249 keeper + 12 frontend)
 **Program:** 22 instructions (18 core + 4 admin utilities)
 **On-chain TVL:** ~260 USDC (moderate: 210, aggressive: 50)
 
@@ -178,6 +179,13 @@ The core monorepo publishes three npm packages and one Anchor program:
 - `fetchLendingRate` / `fetchBankMetrics` — cached on-chain rate fetching (60s TTL)
 - `fetchHistoricalRates` — DeFi Llama historical APY timeseries for backtesting
 - Implements same `YieldBackend` interface as Drift backends — zero coupling to Drift
+
+### @nanuqfi/backend-kamino (zero-dep REST API integration)
+- `KaminoLendingBackend` — USDC lending with mock + real mode (live mainnet rates via Kamino REST API)
+- `fetchUsdcReserveMetrics` — live reserve data (APY, TVL, utilization)
+- `fetchHistoricalMetrics` — 21,000+ daily data points since Oct 2023 for backtesting
+- Zero SDK dependency — pure HTTP via `api.kamino.finance`
+- Implements same `YieldBackend` interface — zero coupling to any specific protocol
 
 ### Allocator Program (Anchor/Rust)
 22 instructions: initialize_allocator, initialize_risk_vault, initialize_treasury, deposit, request_withdraw, withdraw, rebalance, emergency_halt, resume, update_keeper_authority, update_guardrails, acquire_lease, heartbeat, withdraw_treasury, initialize_drift_account, allocate_to_drift, recall_from_drift, update_deposit_cap, update_treasury_usdc, admin_reset_vault, admin_set_rebalance_counter
