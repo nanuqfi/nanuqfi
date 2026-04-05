@@ -12,7 +12,11 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@nanuqfi/core": "workspace:*"
+    "@coral-xyz/anchor": "^0.30.1",
+    "@mrgnlabs/marginfi-client-v2": "6.4.1",
+    "@mrgnlabs/mrgn-common": "2.0.7",
+    "@nanuqfi/core": "workspace:*",
+    "@solana/web3.js": "^1.98.4"
   },
   "devDependencies": {
     "typescript": "^5.7",
