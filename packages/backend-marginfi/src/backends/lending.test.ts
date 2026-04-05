@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { MarginfiLendingBackend } from './lending'
 
 describe('MarginfiLendingBackend', () => {
@@ -71,5 +71,40 @@ describe('MarginfiLendingBackend', () => {
     const found = registry.get('marginfi-lending')
     expect(found).toBeDefined()
     expect(found!.name).toBe('marginfi-lending')
+  })
+})
+
+describe('MarginfiLendingBackend — mock/real mode', () => {
+  it('defaults to mock mode when no client provided', async () => {
+    const backend = new MarginfiLendingBackend()
+    const estimate = await backend.getExpectedYield()
+    expect(estimate.metadata?.mode).toBe('mock')
+  })
+
+  it('defaults to mock mode when mockMode is explicitly true', async () => {
+    const backend = new MarginfiLendingBackend({ mockMode: true })
+    const estimate = await backend.getExpectedYield()
+    expect(estimate.metadata?.mode).toBe('mock')
+  })
+
+  it('throws if real mode requested without client', () => {
+    expect(() => new MarginfiLendingBackend({ mockMode: false }))
+      .toThrow('MarginfiClient required for real mode')
+  })
+
+  it('accepts marginfiClient for real mode', () => {
+    const mockClient = {
+      getBankByTokenSymbol: vi.fn().mockReturnValue({
+        computeInterestRates: () => ({ lendingRate: 0.07, borrowingRate: 0.09 }),
+        computeUtilizationRate: () => 0.65,
+        getTotalAssetQuantity: () => ({ toNumber: () => 50_000_000_000_000 }),
+        getTotalLiabilityQuantity: () => ({ toNumber: () => 32_500_000_000_000 }),
+      }),
+    }
+    const backend = new MarginfiLendingBackend({
+      mockMode: false,
+      marginfiClient: mockClient,
+    })
+    expect(backend.name).toBe('marginfi-lending')
   })
 })
