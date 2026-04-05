@@ -19,19 +19,31 @@
 - [x] AI Keeper — algorithm engine, Claude AI reasoning, REST API, health monitor
 - [x] Frontend — custom components, dark mode, transparency UI
 
-### Integrate (IN PROGRESS)
-- [ ] Drift SDK integration — replace mock mode with real CPI calls
-- [ ] Anchor integration tests on devnet
-- [ ] Wallet connect in frontend (Solana wallet adapter)
-- [ ] Deploy allocator to devnet
-- [ ] Deploy keeper to VPS (Docker)
-- [ ] Deploy frontend to Vercel
-- [ ] CI/CD (GitHub Actions for all 3 repos)
+### Integrate (COMPLETE)
+- [x] Drift SDK integration — real CPI calls via allocate_to_drift/recall_from_drift
+- [x] Anchor integration tests on devnet — e2e-gate 9/10 passing
+- [x] Wallet connect in frontend (Solana wallet adapter)
+- [x] Deploy allocator to devnet — `2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P`
+- [x] Deploy keeper to VPS (Docker) — keeper.nanuqfi.com live
+- [x] Deploy frontend — app.nanuqfi.com live
+- [x] Deploy marketing site — nanuqfi.com live
+- [x] CI/CD (GitHub Actions for all 4 repos → GHCR → VPS auto-deploy)
+
+### Advanced Features (COMPLETE)
+- [x] AI regime detection (trend/range/stress) with per-strategy multipliers
+- [x] Market scan integration — opportunity cost penalty from 50+ DeFi protocols
+- [x] Correlation-aware position sizing (perp concentration cap)
+- [x] Oracle divergence guard + predictive funding slope auto-exit
+- [x] On-chain rebalance submission from keeper
+- [x] Telegram alerts for failures + stress regime
+- [x] Second protocol backend (Marginfi stub) — protocol-agnostic proof
+- [x] On-chain rebalance audit viewer in dashboard
+- [x] Scanner-driven yield opportunity alerts in UI
 
 ### Submit (April 6)
-- [ ] Strategy documentation (thesis, mechanics, risk management)
 - [ ] Demo video (3 min max)
-- [ ] On-chain vault address for verification
+- [ ] Tweet via X API
+- [ ] Strategy doc update
 
 ---
 
@@ -40,7 +52,7 @@
 - [ ] Security review of allocator program
 - [ ] Upgrade authority → Squads multisig
 - [ ] Real devnet testing with live Drift vaults
-- [ ] Keeper monitoring (Telegram alerts, UptimeRobot)
+- [x] Keeper monitoring (Telegram alerts live, UptimeRobot pending)
 - [ ] Mainnet deployment
 - [ ] First depositors (seed TVL from hackathon win)
 
@@ -48,9 +60,10 @@
 
 ## Phase 3: Protocol Expansion (Q3-Q4 2026)
 
-- [ ] Additional backends: Mango, Marginfi, Kamino (just implement YieldBackend)
+- [x] Marginfi backend stub (mock yields, implements YieldBackend interface)
+- [ ] Additional backends: Mango, Kamino (just implement YieldBackend)
 - [ ] Multi-asset vaults (beyond USDC)
-- [ ] Approach 3 evolution: adaptive regime strategy (AI classifies market regime)
+- [x] Adaptive regime strategy — AI classifies trend/range/stress with per-strategy multipliers
 - [ ] Custom ML models for alpha generation (Python microservice — open nuance)
 - [ ] Cross-chain yield routing (Hyperliquid, Arbitrum perps)
 

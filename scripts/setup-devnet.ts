@@ -28,8 +28,10 @@ import idl from '../target/idl/nanuqfi_allocator.json' assert { type: 'json' }
 const PROGRAM_ID = new PublicKey('2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P')
 const KEEPER_AUTHORITY = new PublicKey('2xRNkCNNbEhr7iDsUdZ252LvAtcHFXUNmpSAM7ad6eyk')
 
-// Devnet USDC mint (Circle's official devnet USDC)
-const USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')
+// NanuqFi test USDC mint (admin is mint authority — can mint freely for testing)
+// Note: Program treasury was switched from Circle's devnet USDC to this custom mint
+// via update_treasury_usdc instruction during Phase B testing.
+const USDC_MINT = new PublicKey('BiTXT15XyfSakk5Yz8L8QrzHPWbK8NjoZeEMFrDvKdKh')
 
 // Placeholder Drift vault address (stored for reference, not validated on-chain)
 // Replace with real Drift vault addresses once created via Drift Vault SDK

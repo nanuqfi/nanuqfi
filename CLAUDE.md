@@ -77,6 +77,7 @@ anchor test                     # run Anchor integration tests
 packages/
   core/              → @nanuqfi/core (zero-dep interfaces, registry, router, strategy)
   backend-drift/     → @nanuqfi/backend-drift (5 Drift yield backends)
+  backend-marginfi/  → @nanuqfi/backend-marginfi (Marginfi lending stub — protocol-agnostic proof)
 programs/
   allocator/         → Anchor program (22 instructions, on-chain guardrails + Drift CPI + admin utils)
 scripts/
@@ -106,13 +107,13 @@ scripts/
 
 ### 2. nanuqfi/nanuqfi-keeper
 
-**Purpose:** AI-powered keeper bot — algorithm engine + Claude AI reasoning + health monitoring
+**Purpose:** AI-powered keeper bot — algorithm engine + Claude AI reasoning + health monitoring + on-chain rebalance + Telegram alerts
 **Tech Stack:** TypeScript, Anthropic SDK, Vitest
 **CLAUDE.md:** See `~/local-dev/nanuqfi-keeper/CLAUDE.md`
 
 **Key Commands:**
 ```bash
-pnpm test                       # run all tests (156 tests)
+pnpm test                       # run all tests (249 tests)
 pnpm build                      # compile TypeScript
 pnpm dev                        # run with tsx (dev mode)
 docker build -t nanuqfi-keeper . # build Docker image
@@ -141,9 +142,10 @@ See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 
 **Hackathon:** Ranger Build-A-Bear — deadline April 6, 2026
 **Domain:** nanuqfi.com (marketing) + app.nanuqfi.com (dashboard) + keeper.nanuqfi.com (API)
-**Phase:** Phase D in progress (5/26 pass). A-C complete. Next: vault detail + deposit/withdraw testing.
-**Tests:** 379 total (28 core + 141 backend + 183 keeper + 12 frontend + 15 marketing)
+**Phase:** All phases complete. Strategy, risk, technical, production, novelty — all shipped.
+**Tests:** 437 total (28 core + 141 backend-drift + 7 backend-marginfi + 249 keeper + 12 frontend)
 **Program:** 22 instructions (18 core + 4 admin utilities)
+**On-chain TVL:** ~260 USDC (moderate: 210, aggressive: 50)
 
 ---
 
@@ -153,7 +155,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 
 ## Architecture
 
-The core monorepo publishes two npm packages and one Anchor program:
+The core monorepo publishes three npm packages and one Anchor program:
 
 ### @nanuqfi/core (zero external dependencies)
 - `YieldBackend` / `BackendCapabilities` — interfaces every yield source implements
@@ -169,6 +171,11 @@ The core monorepo publishes two npm packages and one Anchor program:
 - `DriftBasisTradeBackend` — delta-neutral basis trade with 4h funding auto-exit
 - `DriftFundingBackend` — directional funding capture with PnL auto-exit (-2%/-5%)
 - `DriftJitoDNBackend` — JitoSOL delta-neutral with borrow rate auto-exit
+
+### @nanuqfi/backend-marginfi (protocol-agnostic proof)
+- `MarginfiLendingBackend` — USDC lending stub with realistic mock yields (6.5% APY from DeFi Llama)
+- Implements same `YieldBackend` interface as Drift backends
+- Proves multi-protocol architecture — zero coupling to Drift
 
 ### Allocator Program (Anchor/Rust)
 22 instructions: initialize_allocator, initialize_risk_vault, initialize_treasury, deposit, request_withdraw, withdraw, rebalance, emergency_halt, resume, update_keeper_authority, update_guardrails, acquire_lease, heartbeat, withdraw_treasury, initialize_drift_account, allocate_to_drift, recall_from_drift, update_deposit_cap, update_treasury_usdc, admin_reset_vault, admin_set_rebalance_counter
