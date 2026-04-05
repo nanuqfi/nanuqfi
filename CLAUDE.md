@@ -140,10 +140,10 @@ pnpm lint                       # ESLint
 
 See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 
-**Hackathon:** Ranger Build-A-Bear — deadline April 6, 2026
+**Hackathon:** Ranger Build-A-Bear — deadline April 17, 2026
 **Domain:** nanuqfi.com (marketing) + app.nanuqfi.com (dashboard) + keeper.nanuqfi.com (API)
 **Phase:** All phases complete. Strategy, risk, technical, production, novelty — all shipped.
-**Tests:** 437 total (28 core + 141 backend-drift + 7 backend-marginfi + 249 keeper + 12 frontend)
+**Tests:** 459 total (28 core + 141 backend-drift + 29 backend-marginfi + 249 keeper + 12 frontend)
 **Program:** 22 instructions (18 core + 4 admin utilities)
 **On-chain TVL:** ~260 USDC (moderate: 210, aggressive: 50)
 
@@ -172,10 +172,12 @@ The core monorepo publishes three npm packages and one Anchor program:
 - `DriftFundingBackend` — directional funding capture with PnL auto-exit (-2%/-5%)
 - `DriftJitoDNBackend` — JitoSOL delta-neutral with borrow rate auto-exit
 
-### @nanuqfi/backend-marginfi (protocol-agnostic proof)
-- `MarginfiLendingBackend` — USDC lending stub with realistic mock yields (6.5% APY from DeFi Llama)
-- Implements same `YieldBackend` interface as Drift backends
-- Proves multi-protocol architecture — zero coupling to Drift
+### @nanuqfi/backend-marginfi (real Marginfi SDK integration)
+- `MarginfiLendingBackend` — USDC lending with mock + real mode (live mainnet rates via MarginfiClient)
+- `createReadOnlyMarginfiClient` — connection factory for mainnet bank data reads
+- `fetchLendingRate` / `fetchBankMetrics` — cached on-chain rate fetching (60s TTL)
+- `fetchHistoricalRates` — DeFi Llama historical APY timeseries for backtesting
+- Implements same `YieldBackend` interface as Drift backends — zero coupling to Drift
 
 ### Allocator Program (Anchor/Rust)
 22 instructions: initialize_allocator, initialize_risk_vault, initialize_treasury, deposit, request_withdraw, withdraw, rebalance, emergency_halt, resume, update_keeper_authority, update_guardrails, acquire_lease, heartbeat, withdraw_treasury, initialize_drift_account, allocate_to_drift, recall_from_drift, update_deposit_cap, update_treasury_usdc, admin_reset_vault, admin_set_rebalance_counter
