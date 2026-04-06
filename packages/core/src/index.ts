@@ -25,5 +25,9 @@ export type { RetryOptions } from './fetch-retry'
 export { consoleLogger, noopLogger } from './logger'
 export type { Logger } from './logger'
 
+// Cache
+export { TtlCache } from './cache'
+export type { Cache, CacheEntry } from './cache'
+
 // Mocks (for consumers' test suites)
 export { MockYieldBackend } from './mocks/mock-yield-backend'

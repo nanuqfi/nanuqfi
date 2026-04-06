@@ -5,7 +5,7 @@
  * Provides both live rates and historical data for backtesting.
  */
 
-import { fetchWithRetry } from '@nanuqfi/core'
+import { fetchWithRetry, TtlCache } from '@nanuqfi/core'
 
 const DEFAULT_API_BASE = 'https://api.kamino.finance'
 
@@ -51,28 +51,17 @@ interface RawHistoryResponse {
   history: RawHistoryEntry[]
 }
 
-const CACHE_TTL_MS = 60_000
-
-interface CacheEntry<T> {
-  value: T
-  timestamp: number
-}
-
-let metricsCache: CacheEntry<KaminoReserveMetrics> | null = null
+const metricsCache = new TtlCache<KaminoReserveMetrics>(60_000, 120_000)
 
 export function clearKaminoCache(): void {
-  metricsCache = null
-}
-
-function isCacheValid<T>(entry: CacheEntry<T> | null): entry is CacheEntry<T> {
-  if (!entry) return false
-  return Date.now() - entry.timestamp < CACHE_TTL_MS
+  metricsCache.clear()
 }
 
 export async function fetchUsdcReserveMetrics(
   apiBaseUrl: string = DEFAULT_API_BASE
 ): Promise<KaminoReserveMetrics> {
-  if (isCacheValid(metricsCache)) return metricsCache.value
+  const cached = metricsCache.get('metrics')
+  if (cached && !cached.stale) return cached.value
 
   const url = `${apiBaseUrl}/kamino-market/${KAMINO_MAIN_MARKET}/reserves/metrics`
   const res = await fetchWithRetry(url)
@@ -100,7 +89,7 @@ export async function fetchUsdcReserveMetrics(
     utilization: totalSupplyUsd > 0 ? totalBorrowUsd / totalSupplyUsd : 0,
   }
 
-  metricsCache = { value: metrics, timestamp: Date.now() }
+  metricsCache.set('metrics', metrics)
   return metrics
 }
 

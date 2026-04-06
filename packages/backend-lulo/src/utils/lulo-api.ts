@@ -12,10 +12,9 @@
  *   - pool.getPools  → APY values are already DECIMAL (0.0825 = 8.25%) → no conversion
  */
 
-import { fetchWithRetry } from '@nanuqfi/core'
+import { fetchWithRetry, TtlCache } from '@nanuqfi/core'
 
 const DEFAULT_API_BASE = 'https://api.lulo.fi'
-const CACHE_TTL_MS = 60_000
 
 export interface LuloRates {
   regularApy: number
@@ -62,22 +61,12 @@ interface RawPoolResponse {
   regularAvailableAmount: number
 }
 
-interface CacheEntry<T> {
-  value: T
-  timestamp: number
-}
-
-let ratesCache: CacheEntry<LuloRates> | null = null
-let poolCache: CacheEntry<LuloPoolData> | null = null
+const ratesCache = new TtlCache<LuloRates>(60_000, 120_000)
+const poolCache = new TtlCache<LuloPoolData>(60_000, 120_000)
 
 export function clearLuloCache(): void {
-  ratesCache = null
-  poolCache = null
-}
-
-function isCacheValid<T>(entry: CacheEntry<T> | null): entry is CacheEntry<T> {
-  if (!entry) return false
-  return Date.now() - entry.timestamp < CACHE_TTL_MS
+  ratesCache.clear()
+  poolCache.clear()
 }
 
 function buildHeaders(apiKey: string): Record<string, string> {
@@ -96,7 +85,8 @@ export async function fetchLuloRates(
   apiKey: string,
   apiBaseUrl: string = DEFAULT_API_BASE
 ): Promise<LuloRates> {
-  if (isCacheValid(ratesCache)) return ratesCache.value
+  const cached = ratesCache.get('rates')
+  if (cached && !cached.stale) return cached.value
 
   const url = `${apiBaseUrl}/v1/rates.getRates`
   const res = await fetchWithRetry(url, { headers: buildHeaders(apiKey) })
@@ -114,7 +104,7 @@ export async function fetchLuloRates(
     protected24hApy: data.protected['24HR'] / 100,
   }
 
-  ratesCache = { value: rates, timestamp: Date.now() }
+  ratesCache.set('rates', rates)
   return rates
 }
 
@@ -127,7 +117,8 @@ export async function fetchLuloPoolData(
   apiKey: string,
   apiBaseUrl: string = DEFAULT_API_BASE
 ): Promise<LuloPoolData> {
-  if (isCacheValid(poolCache)) return poolCache.value
+  const cachedPool = poolCache.get('pool')
+  if (cachedPool && !cachedPool.stale) return cachedPool.value
 
   const url = `${apiBaseUrl}/v1/pool.getPools`
   const res = await fetchWithRetry(url, { headers: buildHeaders(apiKey) })
@@ -145,6 +136,6 @@ export async function fetchLuloPoolData(
     averagePoolRate: data.averagePoolRate,
   }
 
-  poolCache = { value: pool, timestamp: Date.now() }
+  poolCache.set('pool', pool)
   return pool
 }
