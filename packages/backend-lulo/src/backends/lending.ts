@@ -25,7 +25,7 @@ export interface LuloLendingConfig {
  * Lulo USDC lending backend.
  *
  * Lulo is a lending aggregator on Solana — it routes deposits across
- * Kamino, Drift, MarginFi, and Jupiter to the highest-yielding protocol.
+ * Kamino, MarginFi, and Jupiter to the highest-yielding protocol.
  * This yields the highest available lending rate with diversified protocol risk.
  *
  * Mock mode: deterministic returns for unit tests (default).

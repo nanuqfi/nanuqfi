@@ -540,35 +540,13 @@ async function b20c_rebalanceTooSoon(): Promise<void> {
   }
 }
 
-// ─── B21-B22: Drift CPI (allocate_to_drift / recall_from_drift) ───────────
+// ─── B21-B22: Protocol allocation (allocate_to_protocol / recall_from_protocol)
 
-async function b21_b22_driftCpi(): Promise<void> {
-  console.log('\nB21-B22: Drift CPI')
-
-  const vaultUsdc = await getAssociatedTokenAddress(USDC_MINT, allocatorPDA, true)
-
-  // Check if vault_usdc has any Drift USDC balance
-  try {
-    const acct = await getAccount(connection, vaultUsdc)
-    const balance = Number(acct.amount)
-    if (balance === 0) {
-      record('B21: allocate_to_drift', 'skip', 'Vault USDC balance is 0 — need Drift devnet USDC')
-      record('B22: recall_from_drift', 'skip', 'Vault USDC balance is 0 — need Drift devnet USDC')
-      return
-    }
-    console.log(`  Vault USDC balance: ${balance / 1e6} USDC`)
-  } catch {
-    record('B21: allocate_to_drift', 'skip', 'No vault USDC token account — Drift CPI tests need Drift devnet USDC')
-    record('B22: recall_from_drift', 'skip', 'No vault USDC token account — Drift CPI tests need Drift devnet USDC')
-    return
-  }
-
-  // Drift CPI requires many accounts (state, user, user_stats, spot_market_vault, etc.)
-  // These tests need a fully configured Drift environment.
-  // For now, skip with a clear message.
-  console.log('  [SKIP] Drift CPI tests need Drift devnet USDC and full Drift account setup')
-  record('B21: allocate_to_drift', 'skip', 'Full Drift CPI integration requires Drift devnet USDC')
-  record('B22: recall_from_drift', 'skip', 'Full Drift CPI integration requires Drift devnet USDC')
+async function b21_b22_protocolAllocation(): Promise<void> {
+  console.log('\nB21-B22: Protocol Allocation')
+  console.log('  [SKIP] Protocol allocation tested via generic allocate_to_protocol + whitelist')
+  record('B21: allocate_to_protocol', 'skip', 'Requires whitelisted protocol and funded vault')
+  record('B22: recall_from_protocol', 'skip', 'Requires whitelisted protocol and funded vault')
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -631,7 +609,7 @@ async function main(): Promise<void> {
   await b20ab_weightValidation()  // Weight errors before any cooldown
   await b19_rebalanceValid()      // Valid rebalance — triggers cooldown
   await b20c_rebalanceTooSoon()   // Must fire immediately after B19
-  await b21_b22_driftCpi()
+  await b21_b22_protocolAllocation()
 
   // Summary
   const passed = results.filter(r => r.result === 'pass').length
@@ -657,7 +635,7 @@ async function main(): Promise<void> {
     process.exit(1)
   } else if (skipped > 0) {
     console.log('')
-    console.log('  Some tests skipped (likely need Drift devnet USDC or rebalance cooldown)')
+    console.log('  Some tests skipped (likely need funded vault or rebalance cooldown)')
   } else {
     console.log('')
     console.log('  ALL PHASE B TESTS PASSED')

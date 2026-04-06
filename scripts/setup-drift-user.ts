@@ -149,6 +149,7 @@ async function main(): Promise<void> {
       .rpc()
 
     console.log(`  [done] Drift account initialized — tx: ${tx}`)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error('\n  ERROR: Failed to initialize Drift account')
     console.error(`  ${err.message || err}`)

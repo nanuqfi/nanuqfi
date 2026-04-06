@@ -2,7 +2,7 @@
  * Lulo REST API client for lending rate and pool data.
  *
  * Lulo is Solana's lending aggregator — routes deposits across
- * Kamino, Drift, MarginFi, Jupiter to the highest-yielding protocol.
+ * Kamino, MarginFi, Jupiter to the highest-yielding protocol.
  *
  * Uses api.lulo.fi — no SDK dependency, pure HTTP.
  * Requires x-api-key header for all requests.
