@@ -43,7 +43,7 @@ NanuqFi is a protocol-agnostic, AI-powered yield routing layer for DeFi. Users d
 
 ### AI Keeper Hardening
 - ALWAYS consider failure modes on every keeper change
-- Before claiming any keeper task complete, run through: AI layer failures, algorithm engine failures, Drift/Solana failures, process failures, economic edge cases, cascading failures
+- Before claiming any keeper task complete, run through: AI layer failures, algorithm engine failures, Marginfi/Kamino/Lulo/Solana failures, process failures, economic edge cases, cascading failures
 
 ### UI Standards
 - Custom components ONLY — zero off-the-shelf UI libraries
@@ -79,6 +79,7 @@ packages/
   backend-marginfi/  → @nanuqfi/backend-marginfi (Marginfi lending — real SDK integration)
   backend-kamino/    → @nanuqfi/backend-kamino (Kamino USDC lending — zero-dep REST API)
   backend-lulo/      → @nanuqfi/backend-lulo (Lulo aggregator — routes across Kamino/MarginFi/Jupiter)
+  backtest/          → @nanuqfi/backtest (historical simulation engine — CAGR, Sharpe, Sortino, drawdown)
 programs/
   allocator/         → Anchor program (21 instructions, on-chain guardrails + generic protocol alloc + admin utils)
 scripts/
@@ -110,7 +111,7 @@ scripts/
 
 **Key Commands:**
 ```bash
-pnpm test                       # run all tests (249 tests)
+pnpm test                       # run all tests (206 tests)
 pnpm build                      # compile TypeScript
 pnpm dev                        # run with tsx (dev mode)
 docker build -t nanuqfi-keeper . # build Docker image
@@ -140,7 +141,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 **Hackathon:** Ranger Build-A-Bear — deadline April 17, 2026
 **Domain:** nanuqfi.com (marketing) + app.nanuqfi.com (dashboard) + keeper.nanuqfi.com (API)
 **Phase:** All phases complete. Strategy, risk, technical, production, novelty — all shipped.
-**Tests:** 383 total (28 core + 29 backend-marginfi + 20 backend-kamino + 21 backend-lulo + 23 backtest + 249 keeper + 12 frontend + 1 backtest-integration)
+**Tests:** 339 total (28 core + 29 backend-marginfi + 20 backend-kamino + 21 backend-lulo + 23 backtest + 206 keeper + 12 frontend)
 **Program:** 21 instructions (17 core + 2 generic alloc + 2 admin utilities)
 **On-chain TVL:** ~260 USDC (moderate: 210, aggressive: 50)
 
