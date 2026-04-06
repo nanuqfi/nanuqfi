@@ -58,4 +58,10 @@ pub enum AllocatorError {
     ArithmeticOverflow,
     #[msg("First deposit must meet minimum amount")]
     DepositTooSmall,
+    #[msg("Protocol whitelist is full")]
+    WhitelistFull,
+    #[msg("Protocol already whitelisted")]
+    AlreadyWhitelisted,
+    #[msg("Protocol not whitelisted")]
+    ProtocolNotWhitelisted,
 }

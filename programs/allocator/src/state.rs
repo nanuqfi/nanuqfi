@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 pub const MAX_WEIGHTS: usize = 8;
 pub const MAX_REASON_HASH: usize = 32;
 pub const CURRENT_VERSION: u8 = 1;
+pub const MAX_PROTOCOLS: usize = 8;
 
 #[account]
 #[derive(InitSpace)]
@@ -12,6 +13,8 @@ pub struct Allocator {
     pub keeper_authority: Pubkey,
     pub total_tvl: u64,
     pub halted: bool,
+    #[max_len(MAX_PROTOCOLS)]
+    pub protocol_whitelist: Vec<Pubkey>,
     pub bump: u8,
 }
 

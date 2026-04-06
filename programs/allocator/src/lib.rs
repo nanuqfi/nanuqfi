@@ -58,6 +58,7 @@ pub mod nanuqfi_allocator {
     allocator.keeper_authority = ctx.accounts.keeper_authority.key();
     allocator.total_tvl = 0;
     allocator.halted = false;
+    allocator.protocol_whitelist = vec![];
     allocator.bump = ctx.bumps.allocator;
     Ok(())
   }
@@ -898,12 +899,50 @@ pub mod nanuqfi_allocator {
     Ok(())
   }
 
+  // ─── Protocol Whitelist Management ──────────────────────────────────
+
+  pub fn add_whitelisted_protocol(ctx: Context<AdminUpdateAllocator>, protocol: Pubkey) -> Result<()> {
+    let allocator = &mut ctx.accounts.allocator;
+    require!(
+      allocator.protocol_whitelist.len() < MAX_PROTOCOLS,
+      AllocatorError::WhitelistFull
+    );
+    require!(
+      !allocator.protocol_whitelist.contains(&protocol),
+      AllocatorError::AlreadyWhitelisted
+    );
+    allocator.protocol_whitelist.push(protocol);
+    msg!("Protocol whitelisted: {}", protocol);
+    Ok(())
+  }
+
+  pub fn remove_whitelisted_protocol(ctx: Context<AdminUpdateAllocator>, protocol: Pubkey) -> Result<()> {
+    let allocator = &mut ctx.accounts.allocator;
+    let idx = allocator
+      .protocol_whitelist
+      .iter()
+      .position(|p| p == &protocol)
+      .ok_or(AllocatorError::ProtocolNotWhitelisted)?;
+    allocator.protocol_whitelist.remove(idx);
+    msg!("Protocol removed from whitelist: {}", protocol);
+    Ok(())
+  }
+
   // ─── Generic Protocol Allocation ────────────────────────────────────
 
   /// Transfer USDC from vault to a protocol's token account.
   /// The keeper calls this after the scoring engine proposes allocations.
   pub fn allocate_to_protocol(ctx: Context<AllocateToProtocol>, amount: u64) -> Result<()> {
     require!(!ctx.accounts.allocator.halted, AllocatorError::AllocatorHalted);
+
+    // Validate protocol is whitelisted (skip if whitelist empty — backwards compat during init)
+    if !ctx.accounts.allocator.protocol_whitelist.is_empty() {
+      require!(
+        ctx.accounts.allocator.protocol_whitelist.contains(&ctx.accounts.protocol_usdc.owner),
+        AllocatorError::ProtocolNotWhitelisted
+      );
+    }
+
     require!(amount > 0, AllocatorError::InsufficientBalance);
     require!(
       ctx.accounts.vault_usdc.amount >= amount,
@@ -1424,6 +1463,18 @@ pub struct AdminResetVault<'info> {
     constraint = risk_vault.allocator == allocator.key(),
   )]
   pub risk_vault: Account<'info, RiskVault>,
+  #[account(constraint = admin.key() == allocator.admin @ AllocatorError::UnauthorizedAdmin)]
+  pub admin: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct AdminUpdateAllocator<'info> {
+  #[account(
+    mut,
+    seeds = [b"allocator"],
+    bump = allocator.bump,
+  )]
+  pub allocator: Account<'info, Allocator>,
   #[account(constraint = admin.key() == allocator.admin @ AllocatorError::UnauthorizedAdmin)]
   pub admin: Signer<'info>,
 }
