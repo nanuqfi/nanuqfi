@@ -3,7 +3,9 @@
  * Usage: npx tsx scripts/seed-aggressive.ts
  */
 
-import { Program, AnchorProvider, Wallet, BN, setProvider } from '@coral-xyz/anchor'
+import * as anchor from '@coral-xyz/anchor'
+const { Program, AnchorProvider, Wallet, setProvider } = anchor
+const BN = anchor.default?.BN ?? anchor.BN
 import { Connection, Keypair, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
 import {
   TOKEN_PROGRAM_ID,

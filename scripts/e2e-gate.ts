@@ -12,7 +12,9 @@
  * Usage: npx tsx scripts/e2e-gate.ts
  */
 
-import { Program, AnchorProvider, Wallet, BN, setProvider } from '@coral-xyz/anchor'
+import * as anchor from '@coral-xyz/anchor'
+const { Program, AnchorProvider, Wallet, setProvider } = anchor
+const BN = anchor.default?.BN ?? anchor.BN
 import { Connection, Keypair, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
 import {
   getAssociatedTokenAddress,
@@ -232,6 +234,7 @@ async function step4_deposit(): Promise<StepResult> {
         riskVault: moderateVault,
         userPosition,
         shareMint,
+        usdcMint: USDC_MINT,
         userUsdc,
         userShares,
         vaultUsdc,
@@ -429,6 +432,7 @@ async function step7_withdraw(): Promise<StepResult> {
         userPosition,
         treasury: treasuryPDA,
         shareMint,
+        usdcMint: USDC_MINT,
         userShares,
         userUsdc,
         vaultUsdc,
@@ -559,6 +563,7 @@ async function step9_emergencyHalt(): Promise<StepResult> {
         riskVault: moderateVault,
         userPosition,
         shareMint,
+        usdcMint: USDC_MINT,
         userUsdc,
         userShares,
         vaultUsdc,
