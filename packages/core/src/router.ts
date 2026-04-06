@@ -1,5 +1,6 @@
 import type { YieldBackend, BackendCapabilities } from './interfaces'
 import type { Asset } from './types'
+import type { Logger } from './logger'
 import { CircuitBreaker } from './circuit-breaker'
 
 interface YieldQuery {
@@ -22,9 +23,11 @@ interface BackendSource {
 export class YieldRouter {
   private readonly source: BackendSource
   private readonly breakers: Map<string, CircuitBreaker> = new Map()
+  private readonly logger?: Logger
 
-  constructor(source: BackendSource) {
+  constructor(source: BackendSource, logger?: Logger) {
     this.source = source
+    this.logger = logger
   }
 
   async getBestYields(query: YieldQuery): Promise<RankedYield[]> {
@@ -51,6 +54,17 @@ export class YieldRouter {
         }
       })
     )
+
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i]!
+      if (result.status === 'rejected') {
+        this.logger?.warn('Backend failed during routing', {
+          backend: backends[i]!.name,
+          error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+          circuitState: this.breakers.get(backends[i]!.name)?.state,
+        })
+      }
+    }
 
     return results
       .filter((r): r is PromiseFulfilledResult<RankedYield> => r.status === 'fulfilled')
