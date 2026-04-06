@@ -5,44 +5,17 @@ pub mod errors;
 pub mod state;
 
 pub mod events;
+pub mod validation;
+
+#[cfg(test)]
+mod tests;
 
 use errors::AllocatorError;
 use events::*;
 use state::*;
+use validation::*;
 
 declare_id!("CDhkMBnc43wJQyVaSrreXk2ojvQvZMWrAWNBLSjaRJxq");
-
-/// Management fee: 1% annualized.
-/// Solana produces ~2 slots/sec → ~63_072_000 slots/year.
-/// Fee per slot in bps numerator: 10_000 (1%) * 1_000_000 (precision) / 63_072_000
-const MGMT_FEE_PER_SLOT_SCALED: u64 = 158_548; // ~0.000158548 bps per slot, 1e6 precision
-const MGMT_FEE_PRECISION: u64 = 1_000_000;
-
-/// Performance fee: 10% of gains above HWM (in bps).
-const PERFORMANCE_FEE_BPS: u64 = 1000;
-const BPS_DENOMINATOR: u64 = 10_000;
-
-/// Share price precision (6 decimals, matching USDC).
-const SHARE_PRICE_PRECISION: u64 = 1_000_000;
-
-/// Virtual offset for share price — prevents inflation/griefing attack.
-/// 1 USDC = 1_000_000 base units (6 decimals).
-const VIRTUAL_OFFSET: u64 = 1_000_000;
-
-/// Minimum first deposit to prevent dust attacks.
-const MIN_FIRST_DEPOSIT: u64 = 1_000_000; // 1 USDC
-
-/// Minimum rebalance interval (~1 hour at ~2 slots/sec).
-const MIN_REBALANCE_INTERVAL_SLOTS: u64 = 9_000;
-
-/// Maximum weight shift per rebalance: 20% = 2000 bps.
-const MAX_SHIFT_BPS: u16 = 2_000;
-
-/// Oracle divergence threshold: 1% = 100 bps.
-const ORACLE_DIVERGENCE_BPS: u64 = 100;
-
-/// TVL emergency halt threshold: 85%.
-const TVL_HALT_THRESHOLD_BPS: u64 = 8_500;
 
 /// Equity snapshot refresh interval: ~24h at ~2 slots/sec.
 const EQUITY_SNAPSHOT_INTERVAL: u64 = 216_000;

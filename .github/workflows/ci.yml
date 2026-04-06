@@ -16,7 +16,54 @@ jobs:
       - run: pnpm turbo test
       - name: Audit npm dependencies
         run: pnpm audit --audit-level=high || echo "::warning::pnpm audit found vulnerabilities"
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --quiet
+
+  cargo-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            programs/allocator/target
+          key: cargo-${{ hashFiles('programs/allocator/Cargo.lock') }}
+      - name: Build (zero warnings)
+        run: cargo build
+        working-directory: programs/allocator
+        env:
+          RUSTFLAGS: "-D warnings"
+      - name: Test (zero warnings)
+        run: cargo test
+        working-directory: programs/allocator
+        env:
+          RUSTFLAGS: "-D warnings"
       - name: Audit Rust dependencies
-        run: cd programs/allocator && cargo audit
+        run: |
+          cargo install cargo-audit --quiet
+          cargo audit
+        working-directory: programs/allocator
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: [test, cargo-test]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo build
+      - name: Run integration tests
+        run: pnpm turbo test:int
+        env:
+          KAMINO_INTEGRATION: '1'
+          MARGINFI_INTEGRATION: '1'
+          LULO_INTEGRATION: '1'
+          LULO_API_KEY: ${{ secrets.LULO_API_KEY }}
+          SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
