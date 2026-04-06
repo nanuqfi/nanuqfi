@@ -1,164 +1,152 @@
 # NanuqFi
 
-**Protocol-agnostic, AI-powered yield routing layer for Solana DeFi.**
+### The Yield Routing Layer for DeFi
 
-Users deposit USDC, pick a risk level, and the protocol routes capital to the best risk-adjusted yield across multiple lending protocols -- governed by on-chain guardrails and managed by an AI-enhanced keeper bot.
+Deposit USDC. Pick your risk. NanuqFi routes your capital to the best risk-adjusted yield across Solana lending protocols — autonomously, transparently, and with on-chain guardrails that even the keeper can't bypass.
 
-Live now: [nanuqfi.com](https://nanuqfi.com) | [app.nanuqfi.com](https://app.nanuqfi.com) | [keeper.nanuqfi.com](https://keeper.nanuqfi.com)
+**[nanuqfi.com](https://nanuqfi.com)** | **[app.nanuqfi.com](https://app.nanuqfi.com)** | **[keeper.nanuqfi.com/v1/status](https://keeper.nanuqfi.com/v1/status)**
+
+---
+
+## Why NanuqFi
+
+| Problem | NanuqFi |
+|---------|---------|
+| Yield farming is manual and fragmented | Automated routing across Kamino, Marginfi, Lulo |
+| Users trust opaque vaults | On-chain guardrails — users trust the program, not the operator |
+| Protocol risk is concentrated | AI keeper scores protocols, enforces diversification limits |
+| Rebalancing is reactive | Continuous monitoring with autonomous rebalance proposals |
+| No historical proof | 2.5 years of backtested data proves router beats single-protocol strategies |
 
 ---
 
 ## Architecture
 
 ```
-                         +------------------+
-                         |   NanuqFi App    |
-                         |  (Next.js 15)    |
-                         +--------+---------+
-                                  |
-                    +-------------+-------------+
-                    |                           |
-           +--------v--------+        +--------v--------+
-           |  Allocator       |        |  AI Keeper      |
-           |  (Anchor/Rust)   |        |  (TS + Claude)  |
-           |  27 instructions |        |  Score + Propose|
-           +--------+---------+        +--------+--------+
-                    |                           |
-         +----------+----------+       +--------v--------+
-         |          |          |       |  Algorithm       |
-   +-----v--+ +----v---+ +----v---+   |  Engine          |
-   |Marginfi | | Kamino | | Lulo   |   |  (Risk scoring,  |
-   |Lending  | | Lending| | Agg.   |   |   regime detect) |
-   +--------+  +-------+  +-------+   +-----------------+
+User                    Keeper (AI)                 On-Chain Program
+  |                         |                            |
+  |-- deposit USDC -------->|                            |
+  |                         |-- score protocols -------->|
+  |                         |-- propose rebalance ------>|
+  |                         |     (weights + reasoning)  |
+  |                         |                            |-- validate guardrails
+  |                         |                            |-- enforce limits
+  |                         |                            |-- emit events
+  |                         |                            |
+  |<-- shares minted -------|                            |
+  |                         |                            |
+  |-- request withdraw ---->|                            |
+  |     (time-locked)       |                            |
+  |<-- USDC returned -------|                            |
 ```
 
-**Trust model:** Users trust the auditable on-chain program, not the keeper. The keeper proposes rebalances; the algorithm engine validates; the program enforces guardrails.
+**Trust model:** The keeper proposes. The algorithm validates. The program enforces. Users trust auditable on-chain code — never the operator.
+
+---
+
+## What's Inside
+
+### Allocator Program (Anchor/Rust)
+
+**27 on-chain instructions** — deployed to Solana devnet
+
+```
+Program ID: CDhkMBnc43wJQyVaSrreXk2ojvQvZMWrAWNBLSjaRJxq
+```
+
+| Category | Instructions |
+|----------|-------------|
+| Lifecycle | `initialize_allocator`, `initialize_risk_vault`, `initialize_treasury` |
+| User Flow | `deposit`, `request_withdraw`, `withdraw`, `close_user_position` |
+| Keeper Ops | `rebalance`, `acquire_lease`, `heartbeat`, `allocate_to_protocol`, `recall_from_protocol` |
+| Admin | `emergency_halt`, `resume`, `update_keeper_authority`, `update_guardrails`, `update_deposit_cap`, `update_treasury_usdc`, `withdraw_treasury` |
+| Protocol Mgmt | `add_whitelisted_protocol`, `remove_whitelisted_protocol` |
+| Cleanup | `close_rebalance_record`, `admin_reset_vault` (devnet), `admin_set_tvl` (devnet), `admin_set_redemption_period`, `admin_set_rebalance_counter` (devnet), `admin_set_max_single_deposit` |
+
+### Security Hardening
+
+Every line written as if it ships to mainnet tonight:
+
+- **Token account validation** — `vault_usdc` constrained to correct mint + authority in every instruction
+- **Checked arithmetic** — zero `saturating_sub` in financial paths; underflow = explicit error
+- **Share inflation protection** — virtual offset + minimum first deposit defeats ERC-4626 griefing
+- **Protocol whitelist** — keeper can only allocate to admin-approved destinations
+- **Event emission** — every state change emits an Anchor event for indexers
+- **Devnet-gated utilities** — `#[cfg(feature = "devnet")]` removes admin test tools from mainnet builds
+- **Cumulative fee accounting** — `total_fees_collected` is append-only; separate `total_fees_withdrawn` counter
+- **Per-transaction deposit limits** — prevents flash-loan-style attacks
+- **Guardrail bounds** — admin can't set redemption period below minimum safe value
+
+### SDK Packages
+
+| Package | What It Does | External Deps |
+|---------|-------------|---------------|
+| `@nanuqfi/core` | Interfaces, router, circuit breaker, fetchWithRetry, Logger, TtlCache | None |
+| `@nanuqfi/backend-marginfi` | Marginfi USDC lending — live mainnet rates via SDK | MarginFi SDK |
+| `@nanuqfi/backend-kamino` | Kamino USDC lending — pure HTTP, 21K+ historical data points | None |
+| `@nanuqfi/backend-lulo` | Lulo aggregator — routes across Kamino/MarginFi/Jupiter | None |
+| `@nanuqfi/backtest` | Historical simulation — CAGR, Sharpe, Sortino, drawdown over 2.5 years | None |
+
+All backends implement `YieldBackend`. Add a new protocol by implementing one interface.
 
 ---
 
 ## Quick Start
 
 ```bash
-# Prerequisites: Node >= 22, pnpm, Rust, Anchor CLI
-pnpm install
-pnpm turbo build
-pnpm turbo test          # 139 tests (unit + integration)
-anchor build             # build Anchor program
-anchor test              # on-chain integration tests
+pnpm install                    # install deps
+pnpm turbo build                # compile all packages
+pnpm turbo lint                 # ESLint strict mode
+pnpm turbo test                 # 139 tests across 5 packages
+anchor build                    # build Anchor program
+anchor deploy --provider.cluster devnet   # deploy to devnet
+npx tsx scripts/setup-devnet.ts           # initialize accounts
+npx tsx scripts/e2e-gate.ts               # run E2E gate (9 steps)
 ```
-
----
-
-## Packages
-
-| Package | Description | Deps |
-|---------|-------------|------|
-| `@nanuqfi/core` | Interfaces, registry, router, strategy, circuit breaker, fetchWithRetry, Logger, TtlCache | Zero external deps |
-| `@nanuqfi/backend-marginfi` | Marginfi USDC lending -- real SDK, live mainnet rates, cached fetching | MarginFi SDK |
-| `@nanuqfi/backend-kamino` | Kamino USDC lending -- zero-dep REST API, 21K+ historical data points | Zero external deps |
-| `@nanuqfi/backend-lulo` | Lulo lending aggregator -- routes across Kamino/MarginFi/Jupiter | Zero external deps |
-| `@nanuqfi/backtest` | Historical simulation engine -- 2.5 years of data, CAGR/Sharpe/Sortino/drawdown | Zero external deps |
-
-All backends implement the same `YieldBackend` interface. Zero coupling between protocols. Add a new backend by implementing one interface.
-
----
-
-## Allocator Program (Anchor/Rust)
-
-**Program ID:** `CDhkMBnc43wJQyVaSrreXk2ojvQvZMWrAWNBLSjaRJxq` (devnet)
-
-27 on-chain instructions across five categories:
-
-| Category | Instructions |
-|----------|-------------|
-| **Lifecycle** | `initialize_allocator`, `initialize_risk_vault`, `initialize_treasury` |
-| **User** | `deposit`, `request_withdraw`, `withdraw`, `close_user_position` |
-| **Keeper** | `rebalance`, `acquire_lease`, `heartbeat`, `allocate_to_protocol`, `recall_from_protocol` |
-| **Admin** | `emergency_halt`, `resume`, `update_keeper_authority`, `update_guardrails`, `update_deposit_cap`, `update_treasury_usdc`, `withdraw_treasury` |
-| **Admin Utils** | `admin_reset_vault`, `admin_set_tvl`, `admin_set_redemption_period`, `admin_set_rebalance_counter`, `admin_set_max_single_deposit` |
-| **Protocol Mgmt** | `add_whitelisted_protocol`, `remove_whitelisted_protocol` |
-| **Cleanup** | `close_rebalance_record` |
-
-### Production Hardening
-
-- **vault_usdc constraints** -- all token accounts validated against expected mint
-- **Checked math** -- every arithmetic operation uses checked_add/checked_sub/checked_mul/checked_div
-- **Share inflation protection** -- minimum deposit enforced, share price manipulation prevented
-- **Protocol whitelist** -- only admin-approved protocols can receive allocations
-- **Event emission** -- all state-changing instructions emit Anchor events for indexing
-- **Devnet-gated admin utils** -- admin_set_tvl and similar utilities restricted to non-mainnet clusters
-- **Account close instructions** -- close_user_position, close_rebalance_record for rent reclamation
-
----
-
-## SDK Highlights
-
-### @nanuqfi/core
-
-- **YieldBackend** / **BackendCapabilities** -- interface every yield source implements
-- **YieldBackendRegistry** -- store and query backends by capability
-- **YieldRouter** -- rank backends by risk-adjusted yield with circuit breaker
-- **BaseVaultStrategy** -- abstract class with weight/guardrail validation
-- **fetchWithRetry** -- exponential backoff HTTP client for all API calls
-- **Logger** -- pluggable logger (console or noop for tests)
-- **TtlCache** -- stale-while-revalidate caching with configurable TTL
-- **CircuitBreaker** -- CLOSED / OPEN / HALF_OPEN state machine
-
-### @nanuqfi/backtest
-
-Proves the router outperforms any single protocol. 21K+ daily data points from Oct 2023 through Apr 2026. Metrics: CAGR, Sharpe ratio, Sortino ratio, max drawdown, volatility. Available via `/v1/backtest` on the keeper API.
-
----
-
-## CI Pipeline
-
-GitHub Actions on every push and PR:
-
-1. `pnpm turbo build` -- compile all packages
-2. `pnpm turbo lint` -- ESLint strict mode
-3. `pnpm turbo test` -- 139 unit + integration tests
-4. `pnpm audit` -- npm dependency security audit
-5. `cargo audit` -- Rust dependency security audit
 
 ---
 
 ## Tests
 
-| Package | Tests |
-|---------|-------|
+| Scope | Count |
+|-------|-------|
 | `@nanuqfi/core` | 45 |
 | `@nanuqfi/backend-marginfi` | 29 |
 | `@nanuqfi/backend-kamino` | 20 |
 | `@nanuqfi/backend-lulo` | 21 |
 | `@nanuqfi/backtest` | 24 |
-| **This repo total** | **139** |
+| **Core monorepo** | **139** |
 | nanuqfi-keeper | 206 |
 | nanuqfi-app | 12 |
 | **Ecosystem total** | **357** |
 
----
-
-## Live Deployments
-
-| Service | URL | Stack |
-|---------|-----|-------|
-| Marketing site | [nanuqfi.com](https://nanuqfi.com) | Next.js 16, static export |
-| Dashboard | [app.nanuqfi.com](https://app.nanuqfi.com) | Next.js 15, React 19 |
-| Keeper API | [keeper.nanuqfi.com](https://keeper.nanuqfi.com) | TypeScript, Docker |
-| Allocator | Solana devnet | Anchor/Rust |
+CI runs on every push: build, lint, test, `pnpm audit`, `cargo audit`.
 
 ---
 
-## Related Repositories
+## Live
+
+| What | Where | Stack |
+|------|-------|-------|
+| Marketing | [nanuqfi.com](https://nanuqfi.com) | Next.js 16, static export |
+| Dashboard | [app.nanuqfi.com](https://app.nanuqfi.com) | Next.js 15, React 19, Tailwind 4 |
+| Keeper API | [keeper.nanuqfi.com](https://keeper.nanuqfi.com/v1/status) | TypeScript, Docker, Claude AI |
+| Program | Solana devnet | Anchor 0.30.1, Rust |
+| TVL | 200 USDC | Moderate + Aggressive vaults |
+
+---
+
+## Ecosystem
 
 | Repo | Purpose |
 |------|---------|
-| [nanuqfi-keeper](https://github.com/nanuqfi/nanuqfi-keeper) | AI keeper bot -- algorithm engine + Claude AI reasoning + health monitoring |
-| [nanuqfi-app](https://github.com/nanuqfi/nanuqfi-app) | Frontend dashboard -- custom components, dark mode, transparency UI |
-| [nanuqfi-web](https://github.com/nanuqfi/nanuqfi-web) | Marketing site -- nanuqfi.com |
+| [nanuqfi](https://github.com/nanuqfi/nanuqfi) | Core monorepo — SDK + Anchor program (you are here) |
+| [nanuqfi-keeper](https://github.com/nanuqfi/nanuqfi-keeper) | AI keeper bot — algorithm engine + Claude reasoning + Telegram alerts |
+| [nanuqfi-app](https://github.com/nanuqfi/nanuqfi-app) | Dashboard — custom components, dark mode, transparency UI |
+| [nanuqfi-web](https://github.com/nanuqfi/nanuqfi-web) | Marketing site — nanuqfi.com |
 
 ---
 
 ## License
 
-[BUSL-1.1](LICENSE) -- Business Source License 1.1. Converts to MIT on 2030-04-07.
+Business Source License 1.1 — see [LICENSE](LICENSE).
