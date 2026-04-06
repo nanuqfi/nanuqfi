@@ -12,6 +12,8 @@
  *   - pool.getPools  → APY values are already DECIMAL (0.0825 = 8.25%) → no conversion
  */
 
+import { fetchWithRetry } from '@nanuqfi/core'
+
 const DEFAULT_API_BASE = 'https://api.lulo.fi'
 const CACHE_TTL_MS = 60_000
 
@@ -97,7 +99,7 @@ export async function fetchLuloRates(
   if (isCacheValid(ratesCache)) return ratesCache.value
 
   const url = `${apiBaseUrl}/v1/rates.getRates`
-  const res = await fetch(url, { headers: buildHeaders(apiKey) })
+  const res = await fetchWithRetry(url, { headers: buildHeaders(apiKey) })
 
   if (!res.ok) {
     throw new Error(`Lulo API error: ${res.status} ${res.statusText}`)
@@ -129,7 +131,7 @@ export async function fetchLuloPoolData(
   if (isCacheValid(poolCache)) return poolCache.value
 
   const url = `${apiBaseUrl}/v1/pool.getPools`
-  const res = await fetch(url, { headers: buildHeaders(apiKey) })
+  const res = await fetchWithRetry(url, { headers: buildHeaders(apiKey) })
 
   if (!res.ok) {
     throw new Error(`Lulo API error: ${res.status} ${res.statusText}`)

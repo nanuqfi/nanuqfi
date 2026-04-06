@@ -5,6 +5,8 @@
  * Provides both live rates and historical data for backtesting.
  */
 
+import { fetchWithRetry } from '@nanuqfi/core'
+
 const DEFAULT_API_BASE = 'https://api.kamino.finance'
 
 export const KAMINO_MAIN_MARKET = '7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF'
@@ -73,7 +75,7 @@ export async function fetchUsdcReserveMetrics(
   if (isCacheValid(metricsCache)) return metricsCache.value
 
   const url = `${apiBaseUrl}/kamino-market/${KAMINO_MAIN_MARKET}/reserves/metrics`
-  const res = await fetch(url)
+  const res = await fetchWithRetry(url)
 
   if (!res.ok) {
     throw new Error(`Kamino API error: ${res.status} ${res.statusText}`)
@@ -106,7 +108,7 @@ export async function fetchHistoricalMetrics(
   apiBaseUrl: string = DEFAULT_API_BASE
 ): Promise<KaminoHistoricalPoint[]> {
   const url = `${apiBaseUrl}/kamino-market/${KAMINO_MAIN_MARKET}/reserves/${KAMINO_USDC_RESERVE}/metrics/history`
-  const res = await fetch(url)
+  const res = await fetchWithRetry(url)
 
   if (!res.ok) {
     throw new Error(`Kamino API error: ${res.status} ${res.statusText}`)

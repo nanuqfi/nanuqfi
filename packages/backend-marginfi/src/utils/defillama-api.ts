@@ -12,6 +12,8 @@
  * - Jupiter USDC lending: d783c8df-e2ed-44b4-8317-161ccc1b5f06
  */
 
+import { fetchWithRetry } from '@nanuqfi/core'
+
 const DEFILLAMA_YIELDS_BASE = 'https://yields.llama.fi'
 
 export interface HistoricalRatePoint {
@@ -54,7 +56,7 @@ export function parseHistoricalResponse(raw: ChartResponse): HistoricalRatePoint
  */
 export async function fetchHistoricalRates(poolId: string): Promise<HistoricalRatePoint[]> {
   const url = `${DEFILLAMA_YIELDS_BASE}/chart/${poolId}`
-  const res = await fetch(url)
+  const res = await fetchWithRetry(url)
 
   if (!res.ok) {
     throw new Error(`DeFi Llama API error: ${res.status} ${res.statusText}`)
