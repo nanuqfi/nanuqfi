@@ -1,5 +1,8 @@
 /**
- * NanuqFi Drift User Setup Script
+ * @deprecated Drift Protocol was removed from NanuqFi on 2026-04-05 after the
+ * $285M Drift hack. This script is no longer functional and will be removed.
+ *
+ * NanuqFi Drift User Setup Script (DEPRECATED)
  *
  * Initializes a Drift Protocol User account for the allocator PDA via CPI.
  * This is a one-time setup that must run AFTER setup-devnet.ts.
