@@ -22,6 +22,13 @@ const BPS_DENOMINATOR: u64 = 10_000;
 /// Share price precision (6 decimals, matching USDC).
 const SHARE_PRICE_PRECISION: u64 = 1_000_000;
 
+/// Virtual offset for share price — prevents inflation/griefing attack.
+/// 1 USDC = 1_000_000 base units (6 decimals).
+const VIRTUAL_OFFSET: u64 = 1_000_000;
+
+/// Minimum first deposit to prevent dust attacks.
+const MIN_FIRST_DEPOSIT: u64 = 1_000_000; // 1 USDC
+
 /// Minimum rebalance interval (~1 hour at ~2 slots/sec).
 const MIN_REBALANCE_INTERVAL_SLOTS: u64 = 9_000;
 
@@ -126,15 +133,23 @@ pub mod nanuqfi_allocator {
 
     let vault = &mut ctx.accounts.risk_vault;
 
-    // ERC-4626 share pricing
+    // ERC-4626 share pricing with virtual offset (anti-inflation)
     let shares = if vault.total_shares == 0 {
-      // First deposit: 1:1
+      // First deposit: enforce minimum to prevent dust attack
+      require!(amount >= MIN_FIRST_DEPOSIT, AllocatorError::DepositTooSmall);
       amount
     } else {
+      // Virtual offset prevents first-depositor inflation/griefing
+      let virtual_shares = vault.total_shares
+        .checked_add(VIRTUAL_OFFSET)
+        .ok_or(AllocatorError::MathOverflow)?;
+      let virtual_assets = vault.total_assets
+        .checked_add(VIRTUAL_OFFSET)
+        .ok_or(AllocatorError::MathOverflow)?;
       amount
-        .checked_mul(vault.total_shares)
+        .checked_mul(virtual_shares)
         .ok_or(AllocatorError::MathOverflow)?
-        .checked_div(vault.total_assets)
+        .checked_div(virtual_assets)
         .ok_or(AllocatorError::MathOverflow)?
     };
 
@@ -212,12 +227,18 @@ pub mod nanuqfi_allocator {
       .checked_add(amount)
       .ok_or(AllocatorError::MathOverflow)?;
 
-    // Update HWM price: current share price after deposit
+    // Update HWM price: current share price after deposit (with virtual offset)
     let current_price = vault
       .total_assets
+      .checked_add(VIRTUAL_OFFSET)
+      .ok_or(AllocatorError::MathOverflow)?
       .checked_mul(SHARE_PRICE_PRECISION)
       .ok_or(AllocatorError::MathOverflow)?
-      .checked_div(vault.total_shares)
+      .checked_div(
+        vault.total_shares
+          .checked_add(VIRTUAL_OFFSET)
+          .ok_or(AllocatorError::MathOverflow)?
+      )
       .ok_or(AllocatorError::MathOverflow)?;
 
     // HWM only goes up — use max of existing vs current
@@ -254,13 +275,19 @@ pub mod nanuqfi_allocator {
     position.pending_withdrawal_shares = shares;
     position.withdraw_request_slot = clock.slot;
 
-    // Calculate and store request-time share price
+    // Calculate and store request-time share price (with virtual offset)
     position.request_time_share_price = if vault.total_shares > 0 {
       vault
         .total_assets
+        .checked_add(VIRTUAL_OFFSET)
+        .ok_or(AllocatorError::MathOverflow)?
         .checked_mul(SHARE_PRICE_PRECISION)
         .ok_or(AllocatorError::MathOverflow)?
-        .checked_div(vault.total_shares)
+        .checked_div(
+          vault.total_shares
+            .checked_add(VIRTUAL_OFFSET)
+            .ok_or(AllocatorError::MathOverflow)?
+        )
         .ok_or(AllocatorError::MathOverflow)?
     } else {
       SHARE_PRICE_PRECISION // 1:1 fallback
@@ -293,13 +320,19 @@ pub mod nanuqfi_allocator {
       );
     }
 
-    // Current share price
+    // Current share price (with virtual offset)
     let current_price = if vault.total_shares > 0 {
       vault
         .total_assets
+        .checked_add(VIRTUAL_OFFSET)
+        .ok_or(AllocatorError::MathOverflow)?
         .checked_mul(SHARE_PRICE_PRECISION)
         .ok_or(AllocatorError::MathOverflow)?
-        .checked_div(vault.total_shares)
+        .checked_div(
+          vault.total_shares
+            .checked_add(VIRTUAL_OFFSET)
+            .ok_or(AllocatorError::MathOverflow)?
+        )
         .ok_or(AllocatorError::MathOverflow)?
     } else {
       SHARE_PRICE_PRECISION
@@ -425,13 +458,19 @@ pub mod nanuqfi_allocator {
     position.withdraw_request_slot = 0;
     position.request_time_share_price = 0;
 
-    // Update HWM to current price if still has shares
+    // Update HWM to current price if still has shares (with virtual offset)
     if position.shares > 0 && vault.total_shares > 0 {
       let new_price = vault
         .total_assets
+        .checked_add(VIRTUAL_OFFSET)
+        .ok_or(AllocatorError::MathOverflow)?
         .checked_mul(SHARE_PRICE_PRECISION)
         .ok_or(AllocatorError::MathOverflow)?
-        .checked_div(vault.total_shares)
+        .checked_div(
+          vault.total_shares
+            .checked_add(VIRTUAL_OFFSET)
+            .ok_or(AllocatorError::MathOverflow)?
+        )
         .ok_or(AllocatorError::MathOverflow)?;
       position.high_water_mark_price = new_price;
     }

@@ -56,4 +56,6 @@ pub enum AllocatorError {
     ArithmeticUnderflow,
     #[msg("Arithmetic overflow in financial calculation")]
     ArithmeticOverflow,
+    #[msg("First deposit must meet minimum amount")]
+    DepositTooSmall,
 }
