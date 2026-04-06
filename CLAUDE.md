@@ -81,7 +81,7 @@ packages/
   backend-lulo/      → @nanuqfi/backend-lulo (Lulo aggregator — routes across Kamino/MarginFi/Jupiter)
   backtest/          → @nanuqfi/backtest (historical simulation engine — CAGR, Sharpe, Sortino, drawdown)
 programs/
-  allocator/         → Anchor program (21 instructions, on-chain guardrails + generic protocol alloc + admin utils)
+  allocator/         → Anchor program (27 instructions, on-chain guardrails + protocol whitelist + events + account close)
 scripts/
   setup-devnet.ts    → Initialize allocator accounts on devnet
   e2e-gate.ts        → 10-step pre-mainnet E2E test
@@ -93,8 +93,10 @@ scripts/
 - `packages/core/src/interfaces.ts` — YieldBackend, BackendCapabilities
 - `packages/core/src/router.ts` — YieldRouter with circuit breaker
 - `packages/core/src/strategy.ts` — BaseVaultStrategy
-- `programs/allocator/src/lib.rs` — All 21 instructions (generic alloc/recall + deposit cap + admin utils)
-- `programs/allocator/src/state.rs` — Account structs (Allocator, RiskVault, UserPosition, etc.)
+- `programs/allocator/src/lib.rs` — All 27 instructions (alloc/recall + whitelist + close + events)
+- `programs/allocator/src/state.rs` — Account structs with version fields (Allocator, RiskVault, UserPosition, etc.)
+- `programs/allocator/src/events.rs` — 9 event structs (Deposit, Withdraw, Rebalance, Allocation, etc.)
+- `programs/allocator/src/errors.rs` — Error codes including ArithmeticUnderflow, ProtocolNotWhitelisted, etc.
 - `docs/superpowers/specs/2026-03-15-nanuqfi-vault-strategy-design.md` — Design spec
 - `docs/superpowers/specs/2026-03-15-nanuqfi-integration-design.md` — Integration spec
 - `docs/superpowers/plans/2026-03-15-nanuqfi-implementation.md` — Implementation plan
@@ -141,9 +143,9 @@ See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 **Hackathon:** Ranger Build-A-Bear — deadline April 17, 2026
 **Domain:** nanuqfi.com (marketing) + app.nanuqfi.com (dashboard) + keeper.nanuqfi.com (API)
 **Phase:** All phases complete. Strategy, risk, technical, production, novelty — all shipped.
-**Tests:** 339 total (28 core + 29 backend-marginfi + 20 backend-kamino + 21 backend-lulo + 23 backtest + 206 keeper + 12 frontend)
-**Program:** 21 instructions (17 core + 2 generic alloc + 2 admin utilities)
-**On-chain TVL:** ~260 USDC (moderate: 210, aggressive: 50)
+**Tests:** 357 total (45 core + 29 backend-marginfi + 20 backend-kamino + 21 backend-lulo + 24 backtest + 206 keeper + 12 frontend)
+**Program:** 27 instructions (21 core + 2 whitelist + 2 account close + 1 admin setter + 1 devnet-only)
+**On-chain TVL:** ~260 USDC (moderate: 210, aggressive: 50) — needs redeploy after hardening
 
 ---
 
@@ -158,17 +160,20 @@ The core monorepo publishes four npm packages and one Anchor program:
 ### @nanuqfi/core (zero external dependencies)
 - `YieldBackend` / `BackendCapabilities` — interfaces every yield source implements
 - `YieldBackendRegistry` — stores and queries backends by capability
-- `YieldRouter` — ranks backends by risk-adjusted yield, with circuit breaker
+- `YieldRouter` — ranks backends by risk-adjusted yield, with circuit breaker + logger
 - `BaseVaultStrategy` — abstract class with weight/guardrail validation
 - `MockYieldBackend` — deterministic mock for testing
 - `CircuitBreaker` — CLOSED → OPEN → HALF_OPEN state machine
+- `fetchWithRetry` — HTTP retry with exponential backoff + AbortController timeout
+- `Logger` / `consoleLogger` / `noopLogger` — structured JSON logging interface
+- `TtlCache` — injectable cache with TTL + stale-while-revalidate support
 
 ### @nanuqfi/backend-marginfi (real Marginfi SDK integration)
 - `MarginfiLendingBackend` — USDC lending with mock + real mode (live mainnet rates via MarginfiClient)
 - `createReadOnlyMarginfiClient` — connection factory for mainnet bank data reads
 - `fetchLendingRate` / `fetchBankMetrics` — cached on-chain rate fetching (60s TTL)
 - `fetchHistoricalRates` — DeFi Llama historical APY timeseries for backtesting
-- Implements same `YieldBackend` interface as Drift backends — zero coupling to Drift
+- Implements same `YieldBackend` interface — zero coupling to any specific protocol
 
 ### @nanuqfi/backend-kamino (zero-dep REST API integration)
 - `KaminoLendingBackend` — USDC lending with mock + real mode (live mainnet rates via Kamino REST API)
@@ -181,7 +186,7 @@ The core monorepo publishes four npm packages and one Anchor program:
 - `LuloLendingBackend` — USDC via Lulo aggregator (mock + real mode, live mainnet rates)
 - `fetchLuloRates` — current + 24h APY rates from `api.lulo.fi/v1/rates.getRates` (converts % → decimal)
 - `fetchLuloPoolData` — pool TVL, utilization, and per-pool APYs from `api.lulo.fi/v1/pool.getPools`
-- Lulo routes across Kamino, Drift, MarginFi, Jupiter for best yield — "yield aggregator on aggregator"
+- Lulo routes across Kamino, MarginFi, Jupiter for best yield — "yield aggregator on aggregator"
 - Requires `x-api-key` header for all requests (env: `LULO_API_KEY`)
 - Live rates as of integration: 8.29% regular APY, $19.4M TVL, 2.4% utilization
 
@@ -192,7 +197,7 @@ The core monorepo publishes four npm packages and one Anchor program:
 - Proves router outperforms any single protocol over 2.5 years of data
 
 ### Allocator Program (Anchor/Rust)
-21 instructions: initialize_allocator, initialize_risk_vault, initialize_treasury, deposit, request_withdraw, withdraw, rebalance, emergency_halt, resume, update_keeper_authority, update_guardrails, acquire_lease, heartbeat, withdraw_treasury, allocate_to_protocol, recall_from_protocol, update_deposit_cap, update_treasury_usdc, admin_reset_vault, admin_set_redemption_period, admin_set_rebalance_counter
+27 instructions: initialize_allocator, initialize_risk_vault, initialize_treasury, deposit, request_withdraw, withdraw, rebalance, emergency_halt, resume, update_keeper_authority, update_guardrails, acquire_lease, heartbeat, withdraw_treasury, allocate_to_protocol, recall_from_protocol, update_deposit_cap, update_treasury_usdc, admin_reset_vault (devnet), admin_set_tvl (devnet), admin_set_redemption_period, admin_set_rebalance_counter (devnet), admin_set_max_single_deposit, add_whitelisted_protocol, remove_whitelisted_protocol, close_user_position, close_rebalance_record
 
 **Trust model:** Users trust the on-chain program (auditable), not the keeper. Keeper proposes → algorithm validates → program enforces.
 
