@@ -1015,6 +1015,26 @@ pub mod nanuqfi_allocator {
     msg!("Recalled {} USDC from protocol", amount);
     Ok(())
   }
+
+  // ─── Account Close Instructions ─────────────────────────────────────
+
+  /// Close a user position account and reclaim rent. Requires zero shares.
+  pub fn close_user_position(ctx: Context<CloseUserPosition>) -> Result<()> {
+    let position = &ctx.accounts.user_position;
+    require!(position.shares == 0, AllocatorError::NonZeroShares);
+    require!(
+      position.pending_withdrawal_shares == 0,
+      AllocatorError::PendingWithdrawalExists
+    );
+    msg!("User position closed, rent reclaimed");
+    Ok(())
+  }
+
+  /// Close an old rebalance record and reclaim rent. Admin-only.
+  pub fn close_rebalance_record(_ctx: Context<CloseRebalanceRecord>) -> Result<()> {
+    msg!("Rebalance record closed, rent reclaimed");
+    Ok(())
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1543,4 +1563,61 @@ pub struct RecallFromProtocol<'info> {
   )]
   pub vault_usdc: Account<'info, TokenAccount>,
   pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+pub struct CloseUserPosition<'info> {
+  #[account(
+    seeds = [b"allocator"],
+    bump = allocator.bump,
+  )]
+  pub allocator: Account<'info, Allocator>,
+
+  #[account(
+    constraint = risk_vault.allocator == allocator.key(),
+  )]
+  pub risk_vault: Account<'info, RiskVault>,
+
+  #[account(
+    mut,
+    close = user,
+    seeds = [b"position", user.key().as_ref(), risk_vault.key().as_ref()],
+    bump = user_position.bump,
+    constraint = user_position.user == user.key(),
+  )]
+  pub user_position: Account<'info, UserPosition>,
+
+  #[account(mut)]
+  pub user: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct CloseRebalanceRecord<'info> {
+  #[account(
+    seeds = [b"allocator"],
+    bump = allocator.bump,
+    has_one = admin @ AllocatorError::UnauthorizedAdmin,
+  )]
+  pub allocator: Account<'info, Allocator>,
+
+  #[account(
+    constraint = risk_vault.allocator == allocator.key(),
+  )]
+  pub risk_vault: Account<'info, RiskVault>,
+
+  #[account(
+    mut,
+    close = admin,
+    seeds = [
+      b"rebalance",
+      risk_vault.key().as_ref(),
+      &rebalance_record.counter.to_le_bytes(),
+    ],
+    bump = rebalance_record.bump,
+    constraint = rebalance_record.risk_vault == risk_vault.key(),
+  )]
+  pub rebalance_record: Account<'info, RebalanceRecord>,
+
+  #[account(mut)]
+  pub admin: Signer<'info>,
 }

@@ -68,4 +68,8 @@ pub enum AllocatorError {
     RedemptionPeriodTooShort,
     #[msg("Deposit exceeds per-transaction limit")]
     DepositExceedsTxLimit,
+    #[msg("Cannot close position with non-zero shares")]
+    NonZeroShares,
+    #[msg("Cannot close position with pending withdrawal")]
+    PendingWithdrawalExists,
 }
