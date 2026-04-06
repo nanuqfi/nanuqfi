@@ -14,7 +14,7 @@
 
 import { fetchWithRetry } from '@nanuqfi/core'
 
-const DEFILLAMA_YIELDS_BASE = 'https://yields.llama.fi'
+const DEFILLAMA_YIELDS_BASE = process.env.DEFILLAMA_API_URL ?? 'https://yields.llama.fi'
 
 export interface HistoricalRatePoint {
   timestamp: number    // epoch ms

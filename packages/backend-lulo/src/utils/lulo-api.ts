@@ -14,7 +14,7 @@
 
 import { fetchWithRetry, TtlCache } from '@nanuqfi/core'
 
-const DEFAULT_API_BASE = 'https://api.lulo.fi'
+const DEFAULT_API_BASE = process.env.LULO_API_URL ?? 'https://api.lulo.fi'
 
 export interface LuloRates {
   regularApy: number

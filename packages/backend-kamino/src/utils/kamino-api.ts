@@ -7,7 +7,7 @@
 
 import { fetchWithRetry, TtlCache } from '@nanuqfi/core'
 
-const DEFAULT_API_BASE = 'https://api.kamino.finance'
+const DEFAULT_API_BASE = process.env.KAMINO_API_URL ?? 'https://api.kamino.finance'
 
 export const KAMINO_MAIN_MARKET = '7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF'
 export const KAMINO_USDC_RESERVE = 'D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59'

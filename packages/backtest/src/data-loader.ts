@@ -15,7 +15,7 @@ interface RawHistoryResponse {
 
 export async function fetchHistoricalData(
   config: BacktestConfig,
-  apiBaseUrl: string = 'https://api.kamino.finance'
+  apiBaseUrl: string = process.env.KAMINO_API_URL ?? 'https://api.kamino.finance'
 ): Promise<HistoricalDataPoint[]> {
   const url = `${apiBaseUrl}/kamino-market/${KAMINO_MAIN_MARKET}/reserves/${KAMINO_USDC_RESERVE}/metrics/history`
   const res = await fetch(url)
