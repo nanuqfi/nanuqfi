@@ -64,4 +64,8 @@ pub enum AllocatorError {
     AlreadyWhitelisted,
     #[msg("Protocol not whitelisted")]
     ProtocolNotWhitelisted,
+    #[msg("Redemption period below minimum safe value")]
+    RedemptionPeriodTooShort,
+    #[msg("Deposit exceeds per-transaction limit")]
+    DepositExceedsTxLimit,
 }

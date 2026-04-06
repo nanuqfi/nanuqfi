@@ -96,6 +96,7 @@ pub mod nanuqfi_allocator {
     vault.max_leverage_bps = max_leverage_bps;
     vault.redemption_period_slots = redemption_period_slots;
     vault.deposit_cap = deposit_cap;
+    vault.max_single_deposit = 0; // 0 = uncapped
     vault.bump = ctx.bumps.risk_vault;
     Ok(())
   }
@@ -130,6 +131,12 @@ pub mod nanuqfi_allocator {
           <= deposit_cap,
         AllocatorError::DepositCapExceeded
       );
+    }
+
+    // Per-transaction deposit limit (0 = uncapped)
+    let max_single = ctx.accounts.risk_vault.max_single_deposit;
+    if max_single > 0 {
+      require!(amount <= max_single, AllocatorError::DepositExceedsTxLimit);
     }
 
     let vault = &mut ctx.accounts.risk_vault;
@@ -887,15 +894,25 @@ pub mod nanuqfi_allocator {
     Ok(())
   }
 
-  /// Admin-only: override redemption period (devnet testing — bypasses safety check).
+  /// Admin-only: override redemption period with minimum safety bound.
   pub fn admin_set_redemption_period(ctx: Context<AdminResetVault>, slots: u64) -> Result<()> {
+    const MIN_REDEMPTION_SLOTS: u64 = 100; // ~40 seconds minimum
+    require!(slots >= MIN_REDEMPTION_SLOTS, AllocatorError::RedemptionPeriodTooShort);
     ctx.accounts.risk_vault.redemption_period_slots = slots;
+    msg!("Redemption period set to {} slots", slots);
     Ok(())
   }
 
   /// Admin-only: set rebalance counter to skip past existing RebalanceRecord PDAs.
   pub fn admin_set_rebalance_counter(ctx: Context<AdminResetVault>, counter: u32) -> Result<()> {
     ctx.accounts.risk_vault.rebalance_counter = counter;
+    Ok(())
+  }
+
+  /// Admin-only: set per-transaction deposit limit (0 = uncapped).
+  pub fn admin_set_max_single_deposit(ctx: Context<AdminResetVault>, limit: u64) -> Result<()> {
+    ctx.accounts.risk_vault.max_single_deposit = limit;
+    msg!("Max single deposit set to {}", limit);
     Ok(())
   }
 
