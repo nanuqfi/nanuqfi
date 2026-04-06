@@ -100,12 +100,11 @@ export async function fetchLuloRates(
 
   const url = `${apiBaseUrl}/v1/rates.getRates`
   const res = await fetchWithRetry(url, { headers: buildHeaders(apiKey) })
-
-  if (!res.ok) {
-    throw new Error(`Lulo API error: ${res.status} ${res.statusText}`)
-  }
-
   const data = (await res.json()) as RawRatesResponse
+
+  if (!data || typeof data !== 'object' || !(data as Record<string, unknown>).regular || !(data as Record<string, unknown>).protected) {
+    throw new Error('Lulo API: invalid rates response shape')
+  }
 
   // Convert from percentage to decimal
   const rates: LuloRates = {
@@ -132,12 +131,11 @@ export async function fetchLuloPoolData(
 
   const url = `${apiBaseUrl}/v1/pool.getPools`
   const res = await fetchWithRetry(url, { headers: buildHeaders(apiKey) })
-
-  if (!res.ok) {
-    throw new Error(`Lulo API error: ${res.status} ${res.statusText}`)
-  }
-
   const data = (await res.json()) as RawPoolResponse
+
+  if (!data || typeof data !== 'object' || typeof (data as Record<string, unknown>).totalLiquidity !== 'number') {
+    throw new Error('Lulo API: invalid pool response shape')
+  }
 
   const pool: LuloPoolData = {
     totalLiquidity: data.totalLiquidity,

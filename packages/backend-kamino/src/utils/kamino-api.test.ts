@@ -54,7 +54,8 @@ describe('fetchUsdcReserveMetrics', () => {
     const metrics = await fetchUsdcReserveMetrics()
 
     expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/kamino-market/')
+      expect.stringContaining('/kamino-market/'),
+      expect.any(Object)
     )
     expect(metrics.supplyApy).toBe(0.021)
     expect(metrics.borrowApy).toBe(0.038)
@@ -76,11 +77,10 @@ describe('fetchUsdcReserveMetrics', () => {
   it('throws on non-OK response', async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
-      status: 500,
-      statusText: 'Internal Server Error',
+      status: 404,
     } as Response)
 
-    await expect(fetchUsdcReserveMetrics()).rejects.toThrow('Kamino API error: 500')
+    await expect(fetchUsdcReserveMetrics()).rejects.toThrow('HTTP 404')
   })
 
   it('caches result within TTL', async () => {
@@ -141,9 +141,8 @@ describe('fetchHistoricalMetrics', () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
       status: 404,
-      statusText: 'Not Found',
     } as Response)
 
-    await expect(fetchHistoricalMetrics()).rejects.toThrow('Kamino API error: 404')
+    await expect(fetchHistoricalMetrics()).rejects.toThrow('HTTP 404')
   })
 })

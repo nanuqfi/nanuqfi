@@ -76,12 +76,12 @@ export async function fetchUsdcReserveMetrics(
 
   const url = `${apiBaseUrl}/kamino-market/${KAMINO_MAIN_MARKET}/reserves/metrics`
   const res = await fetchWithRetry(url)
+  const data = (await res.json()) as RawReserveEntry[]
 
-  if (!res.ok) {
-    throw new Error(`Kamino API error: ${res.status} ${res.statusText}`)
+  if (!Array.isArray(data)) {
+    throw new Error(`Kamino API: expected array, got ${typeof data}`)
   }
 
-  const data = (await res.json()) as RawReserveEntry[]
   const usdc = data.find((r) => r.liquidityToken === 'USDC')
 
   if (!usdc) {
@@ -109,12 +109,11 @@ export async function fetchHistoricalMetrics(
 ): Promise<KaminoHistoricalPoint[]> {
   const url = `${apiBaseUrl}/kamino-market/${KAMINO_MAIN_MARKET}/reserves/${KAMINO_USDC_RESERVE}/metrics/history`
   const res = await fetchWithRetry(url)
-
-  if (!res.ok) {
-    throw new Error(`Kamino API error: ${res.status} ${res.statusText}`)
-  }
-
   const data = (await res.json()) as RawHistoryResponse
+
+  if (!data || typeof data !== 'object' || !Array.isArray((data as Record<string, unknown>).history)) {
+    throw new Error('Kamino API: invalid history response shape')
+  }
 
   return data.history.map((entry) => ({
     timestamp: new Date(entry.timestamp).getTime(),
