@@ -35,7 +35,7 @@ impl RiskLevel {
 pub struct RiskVault {
     pub allocator: Pubkey,
     pub risk_level: RiskLevel,
-    pub drift_vault: Pubkey,
+    pub protocol_vault: Pubkey,
     pub share_mint: Pubkey,
     pub total_shares: u64,
     pub total_assets: u64,

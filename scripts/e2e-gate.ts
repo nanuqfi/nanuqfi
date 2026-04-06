@@ -6,7 +6,6 @@
  *
  * Prerequisites:
  * - Allocator program deployed on devnet (setup-devnet.ts)
- * - Drift User account initialized (setup-drift-user.ts)
  * - Devnet USDC in admin wallet (optional — steps that need it will SKIP)
  *
  * Usage: npx tsx scripts/e2e-gate.ts
@@ -28,11 +27,8 @@ import idl from '../target/idl/nanuqfi_allocator.json' assert { type: 'json' }
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const PROGRAM_ID = new PublicKey('2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P')
-const DRIFT_PROGRAM_ID = new PublicKey('dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH')
 
-// Devnet USDC (Circle's official devnet USDC — same as setup-devnet.ts)
-// Test USDC mint (created by us on devnet — we have mint authority)
-// For Drift CPI testing, use Drift's devnet USDC: 8zGuJQqwhZafTah7Uc7Z4tXRnguqkn5KLFAP8oV6PHe2
+// Devnet USDC (test mint — we are the mint authority)
 const USDC_MINT = new PublicKey('BiTXT15XyfSakk5Yz8L8QrzHPWbK8NjoZeEMFrDvKdKh')
 
 // Deposit amount: 10 USDC (6 decimals)
@@ -76,16 +72,6 @@ function getUserPositionPDA(user: PublicKey, riskVault: PublicKey): PublicKey {
   const [pda] = PublicKey.findProgramAddressSync(
     [Buffer.from('position'), user.toBuffer(), riskVault.toBuffer()],
     PROGRAM_ID,
-  )
-  return pda
-}
-
-function getDriftUserPDA(authority: PublicKey, subAccountId: number): PublicKey {
-  const buf = Buffer.alloc(2)
-  buf.writeUInt16LE(subAccountId)
-  const [pda] = PublicKey.findProgramAddressSync(
-    [Buffer.from('user'), authority.toBuffer(), buf],
-    DRIFT_PROGRAM_ID,
   )
   return pda
 }
@@ -157,25 +143,12 @@ async function step2_verifyVaults(): Promise<StepResult> {
   return 'pass'
 }
 
-// ─── Step 3: Verify Drift User Account ─────────────────────────────────────
+// ─── Step 3: Protocol integration check (Drift removed 2026-04-05) ──────────
 
 async function step3_verifyDriftUser(): Promise<StepResult> {
-  console.log('\n3. Verify Drift User Account')
-
-  const driftUser = getDriftUserPDA(allocatorPDA, 0)
-  const info = await connection.getAccountInfo(driftUser)
-
-  if (!info) {
-    console.log('  [FAIL] Drift User PDA not found')
-    console.log(`         Expected: ${driftUser.toBase58()}`)
-    console.log('         Run: npx tsx scripts/setup-drift-user.ts')
-    return 'fail'
-  }
-
-  console.log(`  [PASS] Drift User: ${driftUser.toBase58()}`)
-  console.log(`         Owner: ${info.owner.toBase58()}`)
-  console.log(`         Data: ${info.data.length} bytes`)
-  return 'pass'
+  console.log('\n3. Protocol Integration Check')
+  console.log('  [SKIP] Drift removed — NanuqFi now uses Marginfi/Kamino/Lulo via generic allocate_to_protocol')
+  return 'skip'
 }
 
 // ─── Step 4: Deposit USDC into Moderate Vault ──────────────────────────────
@@ -204,12 +177,12 @@ async function step4_deposit(): Promise<StepResult> {
 
     if (balance < DEPOSIT_AMOUNT) {
       console.log(`  [SKIP] Insufficient USDC (need ${DEPOSIT_AMOUNT / 1e6}, have ${(balance / 1e6).toFixed(2)})`)
-      console.log('         Get devnet USDC from Drift faucet or Circle devnet faucet')
+      console.log('         Mint test USDC via scripts/setup-devnet.ts or Circle devnet faucet')
       return 'skip'
     }
   } catch {
     console.log('  [SKIP] No USDC token account found')
-    console.log('         Get devnet USDC from Drift faucet or Circle devnet faucet')
+    console.log('         Mint test USDC via scripts/setup-devnet.ts or Circle devnet faucet')
     return 'skip'
   }
 
