@@ -13,8 +13,8 @@
 **Target:** Ranger Build-A-Bear Hackathon (Main Track)
 
 ### Build (COMPLETE)
-- [x] Core SDK (`@nanuqfi/core`) — interfaces, registry, router, strategy, circuit breaker
-- [x] On-chain allocator program — 21 instructions, full guardrail suite
+- [x] Core SDK (`@nanuqfi/core`) — interfaces, registry, router, strategy, circuit breaker, fetchWithRetry, Logger, TtlCache
+- [x] On-chain allocator program — 27 instructions, full guardrail suite + production hardening
 - [x] AI Keeper — algorithm engine, Claude AI reasoning, REST API, health monitor
 - [x] Frontend — custom components, dark mode, transparency UI
 
@@ -26,6 +26,7 @@
 - [x] Deploy frontend — app.nanuqfi.com live
 - [x] Deploy marketing site — nanuqfi.com live
 - [x] CI/CD (GitHub Actions for all 4 repos → GHCR → VPS auto-deploy)
+- [x] CI pipeline: build + lint + test + npm audit + cargo audit on every push/PR
 
 ### Advanced Features (COMPLETE)
 - [x] AI regime detection (trend/range/stress) with per-strategy multipliers
@@ -46,19 +47,35 @@
 - [x] `/v1/backtest` endpoint — serves historical performance proof
 - [x] Allocator program — `allocate_to_protocol` / `recall_from_protocol` (generic, not Drift-specific)
 
+### Production Hardening (COMPLETE — 26/26 issues closed)
+- [x] vault_usdc constraints — all token accounts validated against expected mint
+- [x] Checked math — every arithmetic op uses checked_add/sub/mul/div
+- [x] Share inflation protection — minimum deposit, share price manipulation prevented
+- [x] Protocol whitelist — add/remove whitelisted protocol instructions
+- [x] Event emission — all state-changing instructions emit Anchor events
+- [x] Devnet-gated admin utils — admin_set_tvl restricted to non-mainnet
+- [x] Account close instructions — close_user_position, close_rebalance_record (rent reclaim)
+- [x] New SDK modules — fetchWithRetry (exponential backoff), Logger (pluggable), TtlCache (SWR)
+- [x] E2E gate: 9/9 passing
+- [x] Program expanded to 27 instructions (was 21)
+- [x] 357 tests across ecosystem (139 core monorepo + 206 keeper + 12 frontend)
+- [x] TVL: 200 USDC on devnet
+
 ### Submit (April 17)
 - [ ] Demo video (3 min max)
 - [ ] Tweet via X API
 - [ ] Strategy doc update
+- [ ] README.md for all repos
 
 ---
 
-## Phase 2: Production Hardening (April - May 2026)
+## Phase 2: Mainnet Readiness (April - May 2026)
 
-- [ ] Security review of allocator program
+- [x] Production hardening — 26/26 issues complete (see Phase 1)
+- [x] Keeper monitoring (Telegram alerts live, UptimeRobot pending)
+- [ ] Security review of allocator program (external audit)
 - [ ] Upgrade authority → Squads multisig
 - [ ] Real devnet testing with live Marginfi/Kamino/Lulo vaults
-- [x] Keeper monitoring (Telegram alerts live, UptimeRobot pending)
 - [ ] Mainnet deployment
 - [ ] First depositors (seed TVL from hackathon win)
 
