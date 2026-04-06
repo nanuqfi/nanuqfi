@@ -24,10 +24,26 @@ export async function fetchWithRetry(
     try {
       const res = await fetch(url, { ...fetchOpts, signal: controller.signal })
       clearTimeout(timer)
+
       if (res.ok) return res
-      if (res.status < 500 && res.status !== 429) throw new Error(`HTTP ${res.status}`)
+
+      // Non-retryable client errors — throw immediately, don't retry
+      if (res.status < 500 && res.status !== 429) {
+        throw new Error(`HTTP ${res.status}`)
+      }
+
+      // Retryable server error (5xx / 429) — fall through to backoff
+      if (attempt === retries) {
+        throw new Error('fetchWithRetry: all retries exhausted')
+      }
     } catch (err) {
       clearTimeout(timer)
+
+      // Non-retryable errors propagate immediately
+      if (err instanceof Error && err.message.startsWith('HTTP ')) throw err
+      if (err instanceof Error && err.message === 'fetchWithRetry: all retries exhausted') throw err
+
+      // Retryable network/timeout errors
       if (attempt === retries) throw err
     }
 

@@ -57,11 +57,6 @@ export function parseHistoricalResponse(raw: ChartResponse): HistoricalRatePoint
 export async function fetchHistoricalRates(poolId: string): Promise<HistoricalRatePoint[]> {
   const url = `${DEFILLAMA_YIELDS_BASE}/chart/${poolId}`
   const res = await fetchWithRetry(url)
-
-  if (!res.ok) {
-    throw new Error(`DeFi Llama API error: ${res.status} ${res.statusText}`)
-  }
-
   const data = (await res.json()) as ChartResponse
   return parseHistoricalResponse(data)
 }

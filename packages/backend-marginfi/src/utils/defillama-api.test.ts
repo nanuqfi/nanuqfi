@@ -72,7 +72,10 @@ describe('fetchHistoricalRates', () => {
 
     const points = await fetchHistoricalRates('test-pool-id')
 
-    expect(fetch).toHaveBeenCalledWith('https://yields.llama.fi/chart/test-pool-id')
+    expect(fetch).toHaveBeenCalledWith(
+      'https://yields.llama.fi/chart/test-pool-id',
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    )
     expect(points).toHaveLength(1)
     expect(points[0]!.apy).toBe(0.065)
   })
@@ -81,9 +84,8 @@ describe('fetchHistoricalRates', () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
       status: 404,
-      statusText: 'Not Found',
     } as Response)
 
-    await expect(fetchHistoricalRates('bad-id')).rejects.toThrow('DeFi Llama API error: 404 Not Found')
+    await expect(fetchHistoricalRates('bad-id')).rejects.toThrow('HTTP 404')
   })
 })

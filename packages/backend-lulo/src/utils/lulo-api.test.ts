@@ -114,10 +114,9 @@ describe('fetchLuloRates', () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
       status: 401,
-      statusText: 'Unauthorized',
     } as Response)
 
-    await expect(fetchLuloRates(TEST_API_KEY)).rejects.toThrow('Lulo API error: 401')
+    await expect(fetchLuloRates(TEST_API_KEY)).rejects.toThrow('HTTP 401')
   })
 })
 
@@ -178,11 +177,10 @@ describe('fetchLuloPoolData', () => {
   it('throws on non-OK response', async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
-      status: 503,
-      statusText: 'Service Unavailable',
+      status: 400,
     } as Response)
 
-    await expect(fetchLuloPoolData(TEST_API_KEY)).rejects.toThrow('Lulo API error: 503')
+    await expect(fetchLuloPoolData(TEST_API_KEY)).rejects.toThrow('HTTP 400')
   })
 })
 
