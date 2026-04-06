@@ -6,5 +6,12 @@ export type {
   ProtocolMetrics,
 } from './types'
 export { DEFAULT_BACKTEST_CONFIG } from './types'
-export { fetchHistoricalData } from './data-loader'
 export { runBacktest } from './engine'
+export { fetchHistoricalData } from './data-loader'
+export {
+  computeCagr,
+  computeMaxDrawdown,
+  computeSharpeRatio,
+  computeSortinoRatio,
+  computeVolatility,
+} from './metrics'
