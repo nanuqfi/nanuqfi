@@ -62,6 +62,32 @@ importers:
         specifier: ^3
         version: 3.2.4(@types/node@25.5.0)(yaml@2.8.2)
 
+  packages/backend-kamino:
+    dependencies:
+      '@nanuqfi/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      typescript:
+        specifier: ^5.7
+        version: 5.9.3
+      vitest:
+        specifier: ^3
+        version: 3.2.4(@types/node@25.5.0)(yaml@2.8.2)
+
+  packages/backend-lulo:
+    dependencies:
+      '@nanuqfi/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      typescript:
+        specifier: ^5.7
+        version: 5.9.3
+      vitest:
+        specifier: ^3
+        version: 3.2.4(@types/node@25.5.0)(yaml@2.8.2)
+
   packages/backend-marginfi:
     dependencies:
       '@coral-xyz/anchor':

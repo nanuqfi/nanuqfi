@@ -60,7 +60,7 @@ NanuqFi is a protocol-agnostic, AI-powered yield routing layer for DeFi. Users d
 
 ### 1. nanuqfi/nanuqfi (Core Monorepo) - **YOU ARE HERE**
 
-**Purpose:** Protocol-agnostic SDK (`@nanuqfi/core`, `@nanuqfi/backend-drift`) + on-chain allocator program
+**Purpose:** Protocol-agnostic SDK (`@nanuqfi/core`, `@nanuqfi/backend-drift`, `@nanuqfi/backend-lulo`, ...) + on-chain allocator program
 **Tech Stack:** TypeScript, Rust/Anchor 0.30.1, pnpm + Turborepo, Vitest
 
 **Key Commands:**
@@ -79,6 +79,7 @@ packages/
   backend-drift/     → @nanuqfi/backend-drift (5 Drift yield backends)
   backend-marginfi/  → @nanuqfi/backend-marginfi (Marginfi lending stub — protocol-agnostic proof)
   backend-kamino/    → @nanuqfi/backend-kamino (Kamino USDC lending — zero-dep REST API)
+  backend-lulo/      → @nanuqfi/backend-lulo (Lulo aggregator — routes across Kamino/Drift/MarginFi/Jupiter)
 programs/
   allocator/         → Anchor program (22 instructions, on-chain guardrails + Drift CPI + admin utils)
 scripts/
@@ -144,7 +145,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 **Hackathon:** Ranger Build-A-Bear — deadline April 17, 2026
 **Domain:** nanuqfi.com (marketing) + app.nanuqfi.com (dashboard) + keeper.nanuqfi.com (API)
 **Phase:** All phases complete. Strategy, risk, technical, production, novelty — all shipped.
-**Tests:** 479 total (28 core + 141 backend-drift + 29 backend-marginfi + 20 backend-kamino + 249 keeper + 12 frontend)
+**Tests:** 500 total (28 core + 141 backend-drift + 29 backend-marginfi + 20 backend-kamino + 21 backend-lulo + 249 keeper + 12 frontend)
 **Program:** 22 instructions (18 core + 4 admin utilities)
 **On-chain TVL:** ~260 USDC (moderate: 210, aggressive: 50)
 
@@ -186,6 +187,14 @@ The core monorepo publishes three npm packages and one Anchor program:
 - `fetchHistoricalMetrics` — 21,000+ daily data points since Oct 2023 for backtesting
 - Zero SDK dependency — pure HTTP via `api.kamino.finance`
 - Implements same `YieldBackend` interface — zero coupling to any specific protocol
+
+### @nanuqfi/backend-lulo (Lulo lending aggregator)
+- `LuloLendingBackend` — USDC via Lulo aggregator (mock + real mode, live mainnet rates)
+- `fetchLuloRates` — current + 24h APY rates from `api.lulo.fi/v1/rates.getRates` (converts % → decimal)
+- `fetchLuloPoolData` — pool TVL, utilization, and per-pool APYs from `api.lulo.fi/v1/pool.getPools`
+- Lulo routes across Kamino, Drift, MarginFi, Jupiter for best yield — "yield aggregator on aggregator"
+- Requires `x-api-key` header for all requests (env: `LULO_API_KEY`)
+- Live rates as of integration: 8.29% regular APY, $19.4M TVL, 2.4% utilization
 
 ### Allocator Program (Anchor/Rust)
 22 instructions: initialize_allocator, initialize_risk_vault, initialize_treasury, deposit, request_withdraw, withdraw, rebalance, emergency_halt, resume, update_keeper_authority, update_guardrails, acquire_lease, heartbeat, withdraw_treasury, initialize_drift_account, allocate_to_drift, recall_from_drift, update_deposit_cap, update_treasury_usdc, admin_reset_vault, admin_set_rebalance_counter
