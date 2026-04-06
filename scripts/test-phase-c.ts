@@ -41,7 +41,7 @@ interface MockDecision {
 interface MockMarketScan {
   timestamp: number
   opportunities: { protocol: string; apy: number }[]
-  driftComparison: { driftBestApy: number; driftRank: number }
+  protocolComparison: { bestApy: number; bestProtocol: string }
 }
 
 class MockKeeper {
@@ -59,9 +59,9 @@ class MockKeeper {
   async runCycle(): Promise<void> {
     // Simulate algorithm engine work
     const weights: Record<string, number> = {
-      'drift-lending': 4000,
-      'drift-basis': 3000,
-      'drift-jito-dn': 3000,
+      'kamino-lending': 4000,
+      'marginfi-lending': 3000,
+      'lulo-lending': 3000,
     }
 
     this.decisions.push({
@@ -74,17 +74,17 @@ class MockKeeper {
     this.decisions.push({
       timestamp: Date.now(),
       riskLevel: 'aggressive',
-      weights: { ...weights, 'drift-funding': 1000, 'drift-lending': 3000 },
+      weights: { ...weights, 'kamino-lending': 4000, 'marginfi-lending': 3000 },
       yieldData: { ...this.yieldData },
     })
 
     this.marketScan = {
       timestamp: Date.now(),
       opportunities: [
-        { protocol: 'Drift', apy: 0.065 },
-        { protocol: 'marginfi', apy: 0.08 },
+        { protocol: 'Kamino', apy: 0.065 },
+        { protocol: 'MarginFi', apy: 0.08 },
       ],
-      driftComparison: { driftBestApy: 0.065, driftRank: 2 },
+      protocolComparison: { bestApy: 0.08, bestProtocol: 'MarginFi' },
     }
 
     this.cycleCount++
