@@ -10,7 +10,7 @@
 
 NanuqFi is a protocol-agnostic, AI-powered yield routing layer for DeFi. Users deposit USDC, pick a risk level, and the protocol routes capital to the best risk-adjusted yield across multiple strategies — governed by on-chain guardrails and managed by an AI-enhanced keeper bot.
 
-**Endgame:** Route capital across any yield source, any protocol, any chain. Today: Drift Protocol on Solana. Tomorrow: Mango, Marginfi, Kamino, Hyperliquid, cross-chain.
+**Endgame:** Route capital across any yield source, any protocol, any chain. Today: Marginfi, Kamino, Lulo on Solana. Tomorrow: Mango, Hyperliquid, cross-chain.
 
 ### Related Repositories
 
@@ -60,7 +60,7 @@ NanuqFi is a protocol-agnostic, AI-powered yield routing layer for DeFi. Users d
 
 ### 1. nanuqfi/nanuqfi (Core Monorepo) - **YOU ARE HERE**
 
-**Purpose:** Protocol-agnostic SDK (`@nanuqfi/core`, `@nanuqfi/backend-drift`, `@nanuqfi/backend-lulo`, ...) + on-chain allocator program
+**Purpose:** Protocol-agnostic SDK (`@nanuqfi/core`, `@nanuqfi/backend-marginfi`, `@nanuqfi/backend-kamino`, `@nanuqfi/backend-lulo`) + on-chain allocator program
 **Tech Stack:** TypeScript, Rust/Anchor 0.30.1, pnpm + Turborepo, Vitest
 
 **Key Commands:**
@@ -76,16 +76,14 @@ anchor test                     # run Anchor integration tests
 ```
 packages/
   core/              → @nanuqfi/core (zero-dep interfaces, registry, router, strategy)
-  backend-drift/     → @nanuqfi/backend-drift (5 Drift yield backends)
-  backend-marginfi/  → @nanuqfi/backend-marginfi (Marginfi lending stub — protocol-agnostic proof)
+  backend-marginfi/  → @nanuqfi/backend-marginfi (Marginfi lending — real SDK integration)
   backend-kamino/    → @nanuqfi/backend-kamino (Kamino USDC lending — zero-dep REST API)
-  backend-lulo/      → @nanuqfi/backend-lulo (Lulo aggregator — routes across Kamino/Drift/MarginFi/Jupiter)
+  backend-lulo/      → @nanuqfi/backend-lulo (Lulo aggregator — routes across Kamino/MarginFi/Jupiter)
 programs/
-  allocator/         → Anchor program (22 instructions, on-chain guardrails + Drift CPI + admin utils)
+  allocator/         → Anchor program (21 instructions, on-chain guardrails + generic protocol alloc + admin utils)
 scripts/
   setup-devnet.ts    → Initialize allocator accounts on devnet
-  setup-drift-user.ts → Initialize Drift User for allocator PDA
-  e2e-gate.ts        → 10-step pre-mainnet E2E test (10/10 passing)
+  e2e-gate.ts        → 10-step pre-mainnet E2E test
   fix-treasury-usdc.ts → Fix treasury USDC mint mismatch (B19 fix)
   test-phase-b.ts    → Phase B extended on-chain tests (B17-B22)
 ```
@@ -94,10 +92,7 @@ scripts/
 - `packages/core/src/interfaces.ts` — YieldBackend, BackendCapabilities
 - `packages/core/src/router.ts` — YieldRouter with circuit breaker
 - `packages/core/src/strategy.ts` — BaseVaultStrategy
-- `packages/backend-drift/src/drift-connection.ts` — DriftClient factory with failover
-- `packages/backend-drift/src/utils/bn-convert.ts` — bigint ↔ BN conversion
-- `packages/backend-drift/src/utils/drift-data-api.ts` — Drift Data API client
-- `programs/allocator/src/lib.rs` — All 22 instructions (incl. Drift CPI + deposit cap + admin utils)
+- `programs/allocator/src/lib.rs` — All 21 instructions (generic alloc/recall + deposit cap + admin utils)
 - `programs/allocator/src/state.rs` — Account structs (Allocator, RiskVault, UserPosition, etc.)
 - `docs/superpowers/specs/2026-03-15-nanuqfi-vault-strategy-design.md` — Design spec
 - `docs/superpowers/specs/2026-03-15-nanuqfi-integration-design.md` — Integration spec
@@ -145,8 +140,8 @@ See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 **Hackathon:** Ranger Build-A-Bear — deadline April 17, 2026
 **Domain:** nanuqfi.com (marketing) + app.nanuqfi.com (dashboard) + keeper.nanuqfi.com (API)
 **Phase:** All phases complete. Strategy, risk, technical, production, novelty — all shipped.
-**Tests:** 500 total (28 core + 141 backend-drift + 29 backend-marginfi + 20 backend-kamino + 21 backend-lulo + 249 keeper + 12 frontend)
-**Program:** 22 instructions (18 core + 4 admin utilities)
+**Tests:** 359 total (28 core + 29 backend-marginfi + 20 backend-kamino + 21 backend-lulo + 249 keeper + 12 frontend)
+**Program:** 21 instructions (17 core + 2 generic alloc + 2 admin utilities)
 **On-chain TVL:** ~260 USDC (moderate: 210, aggressive: 50)
 
 ---
@@ -157,7 +152,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 
 ## Architecture
 
-The core monorepo publishes three npm packages and one Anchor program:
+The core monorepo publishes four npm packages and one Anchor program:
 
 ### @nanuqfi/core (zero external dependencies)
 - `YieldBackend` / `BackendCapabilities` — interfaces every yield source implements
@@ -166,13 +161,6 @@ The core monorepo publishes three npm packages and one Anchor program:
 - `BaseVaultStrategy` — abstract class with weight/guardrail validation
 - `MockYieldBackend` — deterministic mock for testing
 - `CircuitBreaker` — CLOSED → OPEN → HALF_OPEN state machine
-
-### @nanuqfi/backend-drift
-- `DriftLendingBackend` — USDC lending on Drift (mock + real mode)
-- `DriftInsuranceBackend` — insurance fund staking with 30% drawdown auto-exit
-- `DriftBasisTradeBackend` — delta-neutral basis trade with 4h funding auto-exit
-- `DriftFundingBackend` — directional funding capture with PnL auto-exit (-2%/-5%)
-- `DriftJitoDNBackend` — JitoSOL delta-neutral with borrow rate auto-exit
 
 ### @nanuqfi/backend-marginfi (real Marginfi SDK integration)
 - `MarginfiLendingBackend` — USDC lending with mock + real mode (live mainnet rates via MarginfiClient)
@@ -197,7 +185,7 @@ The core monorepo publishes three npm packages and one Anchor program:
 - Live rates as of integration: 8.29% regular APY, $19.4M TVL, 2.4% utilization
 
 ### Allocator Program (Anchor/Rust)
-22 instructions: initialize_allocator, initialize_risk_vault, initialize_treasury, deposit, request_withdraw, withdraw, rebalance, emergency_halt, resume, update_keeper_authority, update_guardrails, acquire_lease, heartbeat, withdraw_treasury, initialize_drift_account, allocate_to_drift, recall_from_drift, update_deposit_cap, update_treasury_usdc, admin_reset_vault, admin_set_rebalance_counter
+21 instructions: initialize_allocator, initialize_risk_vault, initialize_treasury, deposit, request_withdraw, withdraw, rebalance, emergency_halt, resume, update_keeper_authority, update_guardrails, acquire_lease, heartbeat, withdraw_treasury, allocate_to_protocol, recall_from_protocol, update_deposit_cap, update_treasury_usdc, admin_reset_vault, admin_set_redemption_period, admin_set_rebalance_counter
 
 **Trust model:** Users trust the on-chain program (auditable), not the keeper. Keeper proposes → algorithm validates → program enforces.
 
