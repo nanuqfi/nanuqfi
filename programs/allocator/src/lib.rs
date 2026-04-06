@@ -1003,6 +1003,9 @@ pub struct Deposit<'info> {
   #[account(mut)]
   pub share_mint: Account<'info, Mint>,
 
+  /// USDC mint (for vault_usdc constraint validation)
+  pub usdc_mint: Account<'info, Mint>,
+
   /// User's USDC token account (source)
   #[account(mut)]
   pub user_usdc: Account<'info, TokenAccount>,
@@ -1011,8 +1014,12 @@ pub struct Deposit<'info> {
   #[account(mut)]
   pub user_shares: Account<'info, TokenAccount>,
 
-  /// Vault's USDC token account (destination for deposit)
-  #[account(mut)]
+  /// Vault's USDC token account — constrained to correct mint + authority
+  #[account(
+    mut,
+    token::mint = usdc_mint,
+    token::authority = allocator,
+  )]
   pub vault_usdc: Account<'info, TokenAccount>,
 
   #[account(mut)]
@@ -1080,6 +1087,9 @@ pub struct Withdraw<'info> {
   #[account(mut)]
   pub share_mint: Account<'info, Mint>,
 
+  /// USDC mint (for vault_usdc constraint validation)
+  pub usdc_mint: Account<'info, Mint>,
+
   /// User's share token account (shares to burn)
   #[account(mut)]
   pub user_shares: Account<'info, TokenAccount>,
@@ -1088,8 +1098,12 @@ pub struct Withdraw<'info> {
   #[account(mut)]
   pub user_usdc: Account<'info, TokenAccount>,
 
-  /// Vault's USDC token account (source for withdrawal)
-  #[account(mut)]
+  /// Vault's USDC token account — constrained to correct mint + authority
+  #[account(
+    mut,
+    token::mint = usdc_mint,
+    token::authority = allocator,
+  )]
   pub vault_usdc: Account<'info, TokenAccount>,
 
   /// Treasury USDC token account (receives performance fee)
@@ -1139,8 +1153,15 @@ pub struct Rebalance<'info> {
   )]
   pub treasury: Account<'info, Treasury>,
 
-  /// Vault's USDC token account (fee source)
-  #[account(mut)]
+  /// USDC mint (for vault_usdc constraint validation)
+  pub usdc_mint: Account<'info, Mint>,
+
+  /// Vault's USDC token account (fee source) — constrained
+  #[account(
+    mut,
+    token::mint = usdc_mint,
+    token::authority = allocator,
+  )]
   pub vault_usdc: Account<'info, TokenAccount>,
 
   /// Treasury USDC token account (fee destination)
@@ -1362,8 +1383,14 @@ pub struct AllocateToProtocol<'info> {
   pub risk_vault: Account<'info, RiskVault>,
   #[account(constraint = keeper.key() == allocator.keeper_authority @ AllocatorError::UnauthorizedKeeper)]
   pub keeper: Signer<'info>,
-  /// Vault's USDC token account (source)
-  #[account(mut)]
+  /// USDC mint (for vault_usdc constraint validation)
+  pub usdc_mint: Account<'info, Mint>,
+  /// Vault's USDC token account (source) — constrained
+  #[account(
+    mut,
+    token::mint = usdc_mint,
+    token::authority = allocator,
+  )]
   pub vault_usdc: Account<'info, TokenAccount>,
   /// Protocol's USDC token account (destination)
   #[account(mut)]
@@ -1379,11 +1406,17 @@ pub struct RecallFromProtocol<'info> {
   pub risk_vault: Account<'info, RiskVault>,
   #[account(constraint = keeper.key() == allocator.keeper_authority @ AllocatorError::UnauthorizedKeeper)]
   pub keeper: Signer<'info>,
+  /// USDC mint (for vault_usdc constraint validation)
+  pub usdc_mint: Account<'info, Mint>,
   /// Protocol's USDC token account (source)
   #[account(mut)]
   pub protocol_usdc: Account<'info, TokenAccount>,
-  /// Vault's USDC token account (destination)
-  #[account(mut)]
+  /// Vault's USDC token account (destination) — constrained
+  #[account(
+    mut,
+    token::mint = usdc_mint,
+    token::authority = allocator,
+  )]
   pub vault_usdc: Account<'info, TokenAccount>,
   pub token_program: Program<'info, Token>,
 }
