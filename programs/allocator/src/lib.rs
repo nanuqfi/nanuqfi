@@ -873,6 +873,7 @@ pub mod nanuqfi_allocator {
   /// Admin-only: reset vault accounting to clean state (devnet testing utility).
   /// Zeroes shares, assets, peak equity, timing. Preserves rebalance_counter
   /// (on-chain RebalanceRecord PDAs are keyed by counter, so resetting would collide).
+  #[cfg(feature = "devnet")]
   pub fn admin_reset_vault(ctx: Context<AdminResetVault>) -> Result<()> {
     let vault = &mut ctx.accounts.risk_vault;
     let clock = Clock::get()?;
@@ -889,6 +890,7 @@ pub mod nanuqfi_allocator {
   }
 
   /// Admin-only: set allocator total_tvl to match actual vault totals.
+  #[cfg(feature = "devnet")]
   pub fn admin_set_tvl(ctx: Context<AdminSetTvl>, tvl: u64) -> Result<()> {
     ctx.accounts.allocator.total_tvl = tvl;
     Ok(())
@@ -904,6 +906,7 @@ pub mod nanuqfi_allocator {
   }
 
   /// Admin-only: set rebalance counter to skip past existing RebalanceRecord PDAs.
+  #[cfg(feature = "devnet")]
   pub fn admin_set_rebalance_counter(ctx: Context<AdminResetVault>, counter: u32) -> Result<()> {
     ctx.accounts.risk_vault.rebalance_counter = counter;
     Ok(())
