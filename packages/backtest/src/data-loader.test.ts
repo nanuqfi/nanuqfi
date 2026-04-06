@@ -47,4 +47,27 @@ describe('fetchHistoricalData', () => {
     vi.mocked(fetch).mockResolvedValue({ ok: false, status: 500, statusText: 'Error' } as Response)
     await expect(fetchHistoricalData(DEFAULT_BACKTEST_CONFIG)).rejects.toThrow('Kamino API error')
   })
+
+  it('aggregates hourly data to daily averages', async () => {
+    // 3 points on same day + 1 point on next day = 2 daily points
+    const hourlyResponse = {
+      reserve: 'D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59',
+      history: [
+        { timestamp: '2024-01-01T00:00:00.000Z', metrics: { supplyInterestAPY: 0.04, borrowInterestAPY: 0.06, depositTvl: '50000000' } },
+        { timestamp: '2024-01-01T06:00:00.000Z', metrics: { supplyInterestAPY: 0.05, borrowInterestAPY: 0.07, depositTvl: '50000000' } },
+        { timestamp: '2024-01-01T12:00:00.000Z', metrics: { supplyInterestAPY: 0.06, borrowInterestAPY: 0.08, depositTvl: '50000000' } },
+        { timestamp: '2024-01-02T00:00:00.000Z', metrics: { supplyInterestAPY: 0.03, borrowInterestAPY: 0.05, depositTvl: '49000000' } },
+      ],
+    }
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true, json: () => Promise.resolve(hourlyResponse),
+    } as Response)
+
+    const data = await fetchHistoricalData(DEFAULT_BACKTEST_CONFIG)
+    expect(data).toHaveLength(2) // 2 days, not 4 hours
+    // Day 1 average: (0.04 + 0.05 + 0.06) / 3 = 0.05
+    expect(data[0]!.kaminoApy).toBeCloseTo(0.05, 4)
+    // Day 2: single point 0.03
+    expect(data[1]!.kaminoApy).toBe(0.03)
+  })
 })

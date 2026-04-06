@@ -26,7 +26,7 @@ export async function fetchHistoricalData(
 
   const raw = (await res.json()) as RawHistoryResponse
 
-  return raw.history
+  const hourly = raw.history
     .filter((entry) => entry.metrics.supplyInterestAPY > 0)
     .map((entry) => {
       const kaminoApy = entry.metrics.supplyInterestAPY
@@ -39,4 +39,30 @@ export async function fetchHistoricalData(
         luloApy,
       }
     })
+
+  return aggregateToDaily(hourly)
+}
+
+/**
+ * Aggregates sub-daily (e.g. hourly) data points into daily averages.
+ * The Kamino API returns ~hourly observations; treating each as a daily
+ * data point causes the engine to compound ~24x too often, inflating returns.
+ */
+function aggregateToDaily(points: HistoricalDataPoint[]): HistoricalDataPoint[] {
+  const byDay = new Map<string, HistoricalDataPoint[]>()
+  for (const p of points) {
+    const day = new Date(p.timestamp).toISOString().split('T')[0]!
+    const existing = byDay.get(day) ?? []
+    existing.push(p)
+    byDay.set(day, existing)
+  }
+
+  return Array.from(byDay.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, dayPoints]) => ({
+      timestamp: new Date(day + 'T00:00:00.000Z').getTime(),
+      kaminoApy: dayPoints.reduce((s, p) => s + p.kaminoApy, 0) / dayPoints.length,
+      marginfiApy: dayPoints.reduce((s, p) => s + p.marginfiApy, 0) / dayPoints.length,
+      luloApy: dayPoints.reduce((s, p) => s + p.luloApy, 0) / dayPoints.length,
+    }))
 }

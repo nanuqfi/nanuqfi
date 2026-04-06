@@ -8,7 +8,8 @@ const SKIP = !process.env.BACKTEST_INTEGRATION
 describe.skipIf(SKIP)('Backtest full integration', () => {
   it('runs backtest on real Kamino historical data', async () => {
     const data = await fetchHistoricalData(DEFAULT_BACKTEST_CONFIG)
-    expect(data.length).toBeGreaterThan(1000)
+    // ~900 daily points for ~2.5 years of hourly data aggregated to daily averages
+    expect(data.length).toBeGreaterThan(500)
 
     const result = runBacktest(data, DEFAULT_BACKTEST_CONFIG)
 
