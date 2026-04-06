@@ -2,10 +2,12 @@ use anchor_lang::prelude::*;
 
 pub const MAX_WEIGHTS: usize = 8;
 pub const MAX_REASON_HASH: usize = 32;
+pub const CURRENT_VERSION: u8 = 1;
 
 #[account]
 #[derive(InitSpace)]
 pub struct Allocator {
+    pub version: u8,
     pub admin: Pubkey,
     pub keeper_authority: Pubkey,
     pub total_tvl: u64,
@@ -33,6 +35,7 @@ impl RiskLevel {
 #[account]
 #[derive(InitSpace)]
 pub struct RiskVault {
+    pub version: u8,
     pub allocator: Pubkey,
     pub risk_level: RiskLevel,
     pub protocol_vault: Pubkey,
@@ -60,6 +63,7 @@ pub struct RiskVault {
 #[account]
 #[derive(InitSpace)]
 pub struct UserPosition {
+    pub version: u8,
     pub user: Pubkey,
     pub risk_vault: Pubkey,
     pub shares: u64,
@@ -75,6 +79,7 @@ pub struct UserPosition {
 #[account]
 #[derive(InitSpace)]
 pub struct Treasury {
+    pub version: u8,
     pub allocator: Pubkey,
     pub usdc_token_account: Pubkey,
     pub total_fees_collected: u64,
@@ -84,6 +89,7 @@ pub struct Treasury {
 #[account]
 #[derive(InitSpace)]
 pub struct RebalanceRecord {
+    pub version: u8,
     pub risk_vault: Pubkey,
     pub counter: u32,
     pub slot: u64,
@@ -100,6 +106,7 @@ pub struct RebalanceRecord {
 #[account]
 #[derive(InitSpace)]
 pub struct KeeperLease {
+    pub version: u8,
     pub keeper: Pubkey,
     pub lease_expiry_slot: u64,
     pub heartbeat_slot: u64,

@@ -46,6 +46,7 @@ pub mod nanuqfi_allocator {
 
   pub fn initialize_allocator(ctx: Context<InitializeAllocator>) -> Result<()> {
     let allocator = &mut ctx.accounts.allocator;
+    allocator.version = CURRENT_VERSION;
     allocator.admin = ctx.accounts.admin.key();
     allocator.keeper_authority = ctx.accounts.keeper_authority.key();
     allocator.total_tvl = 0;
@@ -66,6 +67,7 @@ pub mod nanuqfi_allocator {
     deposit_cap: u64,
   ) -> Result<()> {
     let vault = &mut ctx.accounts.risk_vault;
+    vault.version = CURRENT_VERSION;
     vault.allocator = ctx.accounts.allocator.key();
     vault.risk_level = risk_level;
     vault.protocol_vault = ctx.accounts.protocol_vault.key();
@@ -94,6 +96,7 @@ pub mod nanuqfi_allocator {
 
   pub fn initialize_treasury(ctx: Context<InitializeTreasury>) -> Result<()> {
     let treasury = &mut ctx.accounts.treasury;
+    treasury.version = CURRENT_VERSION;
     treasury.allocator = ctx.accounts.allocator.key();
     treasury.usdc_token_account = ctx.accounts.treasury_usdc.key();
     treasury.total_fees_collected = 0;
@@ -189,6 +192,7 @@ pub mod nanuqfi_allocator {
 
     if position.user == Pubkey::default() {
       // First-time initialization
+      position.version = CURRENT_VERSION;
       position.user = ctx.accounts.user.key();
       position.risk_vault = vault.key();
       position.entry_slot = clock.slot;
@@ -619,6 +623,7 @@ pub mod nanuqfi_allocator {
 
     // 12. Record RebalanceRecord
     let record = &mut ctx.accounts.rebalance_record;
+    record.version = CURRENT_VERSION;
     record.risk_vault = vault.key();
     record.counter = vault.rebalance_counter;
     record.slot = clock.slot;
@@ -728,6 +733,7 @@ pub mod nanuqfi_allocator {
       return Err(AllocatorError::LeaseConflict.into());
     }
 
+    lease.version = CURRENT_VERSION;
     lease.keeper = ctx.accounts.keeper_authority.key();
     lease.lease_expiry_slot = clock
       .slot
