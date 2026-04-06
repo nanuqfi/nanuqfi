@@ -1,0 +1,14 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "packages/core/src/index.ts",
+    "packages/backend-marginfi/src/index.ts",
+    "packages/backend-kamino/src/index.ts",
+    "packages/backend-lulo/src/index.ts",
+    "packages/backtest/src/index.ts"
+  ],
+  "out": "docs/api",
+  "name": "NanuqFi SDK",
+  "exclude": ["**/*.test.ts", "**/integration/**"],
+  "excludePrivate": true
+}
