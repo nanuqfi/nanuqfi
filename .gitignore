@@ -9,4 +9,5 @@ test-ledger/
 .env.*
 !.env.example
 .claude/
+.worktrees/
 docs/api/
