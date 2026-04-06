@@ -100,6 +100,7 @@ pub mod nanuqfi_allocator {
     treasury.allocator = ctx.accounts.allocator.key();
     treasury.usdc_token_account = ctx.accounts.treasury_usdc.key();
     treasury.total_fees_collected = 0;
+    treasury.total_fees_withdrawn = 0;
     treasury.bump = ctx.bumps.treasury;
     Ok(())
   }
@@ -767,6 +768,15 @@ pub mod nanuqfi_allocator {
 
   pub fn withdraw_treasury(ctx: Context<WithdrawTreasury>, amount: u64) -> Result<()> {
     require!(amount > 0, AllocatorError::InsufficientBalance);
+
+    // Check available fees (collected minus already withdrawn)
+    let treasury = &ctx.accounts.treasury;
+    let available = treasury
+      .total_fees_collected
+      .checked_sub(treasury.total_fees_withdrawn)
+      .ok_or(AllocatorError::ArithmeticUnderflow)?;
+    require!(amount <= available, AllocatorError::InsufficientFees);
+
     require!(
       ctx.accounts.treasury_usdc.amount >= amount,
       AllocatorError::InsufficientBalance
@@ -788,11 +798,12 @@ pub mod nanuqfi_allocator {
       amount,
     )?;
 
+    // Increment withdrawn counter (total_fees_collected stays cumulative)
     let treasury = &mut ctx.accounts.treasury;
-    treasury.total_fees_collected = treasury
-      .total_fees_collected
-      .checked_sub(amount)
-      .ok_or(AllocatorError::ArithmeticUnderflow)?;
+    treasury.total_fees_withdrawn = treasury
+      .total_fees_withdrawn
+      .checked_add(amount)
+      .ok_or(AllocatorError::ArithmeticOverflow)?;
 
     msg!("Treasury withdrawal: {} USDC", amount);
     Ok(())

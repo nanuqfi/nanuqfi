@@ -83,6 +83,7 @@ pub struct Treasury {
     pub allocator: Pubkey,
     pub usdc_token_account: Pubkey,
     pub total_fees_collected: u64,
+    pub total_fees_withdrawn: u64,
     pub bump: u8,
 }
 
