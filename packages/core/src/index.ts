@@ -21,5 +21,9 @@ export { CircuitBreaker, CircuitState } from './circuit-breaker'
 export { fetchWithRetry } from './fetch-retry'
 export type { RetryOptions } from './fetch-retry'
 
+// Logger
+export { consoleLogger, noopLogger } from './logger'
+export type { Logger } from './logger'
+
 // Mocks (for consumers' test suites)
 export { MockYieldBackend } from './mocks/mock-yield-backend'
