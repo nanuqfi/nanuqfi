@@ -11,6 +11,8 @@ jobs:
         with:
           node-version: '22'
       - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo build
+      - run: pnpm turbo lint
       - run: pnpm turbo test
       - name: Audit npm dependencies
         run: pnpm audit --audit-level=high || echo "::warning::pnpm audit found vulnerabilities"

@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   fetchHistoricalRates,
   parseHistoricalResponse,
-  type HistoricalRatePoint,
 } from './defillama-api'
 
 describe('parseHistoricalResponse', () => {

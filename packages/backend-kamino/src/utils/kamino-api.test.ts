@@ -3,9 +3,7 @@ import {
   fetchUsdcReserveMetrics,
   fetchHistoricalMetrics,
   clearKaminoCache,
-  KAMINO_MAIN_MARKET,
   KAMINO_USDC_RESERVE,
-  type KaminoReserveMetrics,
 } from './kamino-api'
 
 const MOCK_RESERVE_RESPONSE = [

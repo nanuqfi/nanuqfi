@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { RiskLevel, RISK_LEVELS, isValidRiskLevel } from './types'
+import { RISK_LEVELS, isValidRiskLevel } from './types'
 
 describe('RiskLevel', () => {
   it('defines three risk levels', () => {

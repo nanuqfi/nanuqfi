@@ -3,8 +3,6 @@ import {
   fetchLuloRates,
   fetchLuloPoolData,
   clearLuloCache,
-  type LuloRates,
-  type LuloPoolData,
 } from './lulo-api'
 
 // Rates API returns percentages — must be divided by 100
