@@ -140,7 +140,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 **Hackathon:** Ranger Build-A-Bear — deadline April 17, 2026
 **Domain:** nanuqfi.com (marketing) + app.nanuqfi.com (dashboard) + keeper.nanuqfi.com (API)
 **Phase:** All phases complete. Strategy, risk, technical, production, novelty — all shipped.
-**Tests:** 359 total (28 core + 29 backend-marginfi + 20 backend-kamino + 21 backend-lulo + 249 keeper + 12 frontend)
+**Tests:** 383 total (28 core + 29 backend-marginfi + 20 backend-kamino + 21 backend-lulo + 23 backtest + 249 keeper + 12 frontend + 1 backtest-integration)
 **Program:** 21 instructions (17 core + 2 generic alloc + 2 admin utilities)
 **On-chain TVL:** ~260 USDC (moderate: 210, aggressive: 50)
 
@@ -183,6 +183,12 @@ The core monorepo publishes four npm packages and one Anchor program:
 - Lulo routes across Kamino, Drift, MarginFi, Jupiter for best yield — "yield aggregator on aggregator"
 - Requires `x-api-key` header for all requests (env: `LULO_API_KEY`)
 - Live rates as of integration: 8.29% regular APY, $19.4M TVL, 2.4% utilization
+
+### @nanuqfi/backtest (historical simulation engine)
+- `runBacktest` — day-by-day scoring simulation across Kamino/Marginfi/Lulo
+- `fetchHistoricalData` — 21K+ Kamino historical data points with protocol estimates
+- `computeMetrics` — CAGR, Sharpe ratio, Sortino ratio, max drawdown, volatility
+- Proves router outperforms any single protocol over 2.5 years of data
 
 ### Allocator Program (Anchor/Rust)
 21 instructions: initialize_allocator, initialize_risk_vault, initialize_treasury, deposit, request_withdraw, withdraw, rebalance, emergency_halt, resume, update_keeper_authority, update_guardrails, acquire_lease, heartbeat, withdraw_treasury, allocate_to_protocol, recall_from_protocol, update_deposit_cap, update_treasury_usdc, admin_reset_vault, admin_set_redemption_period, admin_set_rebalance_counter
