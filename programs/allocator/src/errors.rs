@@ -50,4 +50,8 @@ pub enum AllocatorError {
     ProtocolCpiFailed,
     #[msg("Deposit exceeds vault cap")]
     DepositCapExceeded,
+    #[msg("Arithmetic underflow in financial calculation")]
+    ArithmeticUnderflow,
+    #[msg("Arithmetic overflow in financial calculation")]
+    ArithmeticOverflow,
 }

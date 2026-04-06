@@ -412,7 +412,8 @@ pub mod nanuqfi_allocator {
     let allocator_account = &mut ctx.accounts.allocator;
     allocator_account.total_tvl = allocator_account
       .total_tvl
-      .saturating_sub(gross_usdc);
+      .checked_sub(gross_usdc)
+      .ok_or(AllocatorError::ArithmeticUnderflow)?;
 
     // Update position
     position.shares = position
@@ -601,7 +602,8 @@ pub mod nanuqfi_allocator {
 
           vault.total_assets = vault
             .total_assets
-            .saturating_sub(transfer_fee);
+            .checked_sub(transfer_fee)
+            .ok_or(AllocatorError::ArithmeticUnderflow)?;
 
           let treasury = &mut ctx.accounts.treasury;
           treasury.total_fees_collected = treasury
@@ -616,7 +618,7 @@ pub mod nanuqfi_allocator {
 
     // 11. Update equity_24h_ago periodically
     if vault.equity_24h_ago == 0
-      || clock.slot.saturating_sub(vault.last_rebalance_slot) >= EQUITY_SNAPSHOT_INTERVAL
+      || clock.slot.checked_sub(vault.last_rebalance_slot).unwrap_or(0) >= EQUITY_SNAPSHOT_INTERVAL
     {
       vault.equity_24h_ago = equity_snapshot;
     }
@@ -789,7 +791,8 @@ pub mod nanuqfi_allocator {
     let treasury = &mut ctx.accounts.treasury;
     treasury.total_fees_collected = treasury
       .total_fees_collected
-      .saturating_sub(amount);
+      .checked_sub(amount)
+      .ok_or(AllocatorError::ArithmeticUnderflow)?;
 
     msg!("Treasury withdrawal: {} USDC", amount);
     Ok(())
