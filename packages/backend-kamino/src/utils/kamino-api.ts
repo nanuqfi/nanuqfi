@@ -63,34 +63,39 @@ export async function fetchUsdcReserveMetrics(
   const cached = metricsCache.get('metrics')
   if (cached && !cached.stale) return cached.value
 
-  const url = `${apiBaseUrl}/kamino-market/${KAMINO_MAIN_MARKET}/reserves/metrics`
-  const res = await fetchWithRetry(url)
-  const data = (await res.json()) as RawReserveEntry[]
+  try {
+    const url = `${apiBaseUrl}/kamino-market/${KAMINO_MAIN_MARKET}/reserves/metrics`
+    const res = await fetchWithRetry(url)
+    const data = (await res.json()) as RawReserveEntry[]
 
-  if (!Array.isArray(data)) {
-    throw new Error(`Kamino API: expected array, got ${typeof data}`)
+    if (!Array.isArray(data)) {
+      throw new Error(`Kamino API: expected array, got ${typeof data}`)
+    }
+
+    const usdc = data.find((r) => r.liquidityToken === 'USDC')
+
+    if (!usdc) {
+      throw new Error('USDC reserve not found in Kamino response')
+    }
+
+    const totalSupplyUsd = Number(usdc.totalSupplyUsd)
+    const totalBorrowUsd = Number(usdc.totalBorrowUsd)
+
+    const metrics: KaminoReserveMetrics = {
+      supplyApy: Number(usdc.supplyApy),
+      borrowApy: Number(usdc.borrowApy),
+      totalSupplyUsd,
+      totalBorrowUsd,
+      availableLiquidityUsd: totalSupplyUsd - totalBorrowUsd,
+      utilization: totalSupplyUsd > 0 ? totalBorrowUsd / totalSupplyUsd : 0,
+    }
+
+    metricsCache.set('metrics', metrics)
+    return metrics
+  } catch (err) {
+    if (cached?.stale) return cached.value
+    throw err
   }
-
-  const usdc = data.find((r) => r.liquidityToken === 'USDC')
-
-  if (!usdc) {
-    throw new Error('USDC reserve not found in Kamino response')
-  }
-
-  const totalSupplyUsd = Number(usdc.totalSupplyUsd)
-  const totalBorrowUsd = Number(usdc.totalBorrowUsd)
-
-  const metrics: KaminoReserveMetrics = {
-    supplyApy: Number(usdc.supplyApy),
-    borrowApy: Number(usdc.borrowApy),
-    totalSupplyUsd,
-    totalBorrowUsd,
-    availableLiquidityUsd: totalSupplyUsd - totalBorrowUsd,
-    utilization: totalSupplyUsd > 0 ? totalBorrowUsd / totalSupplyUsd : 0,
-  }
-
-  metricsCache.set('metrics', metrics)
-  return metrics
 }
 
 export async function fetchHistoricalMetrics(

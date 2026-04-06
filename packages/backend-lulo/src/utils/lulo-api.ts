@@ -88,24 +88,29 @@ export async function fetchLuloRates(
   const cached = ratesCache.get('rates')
   if (cached && !cached.stale) return cached.value
 
-  const url = `${apiBaseUrl}/v1/rates.getRates`
-  const res = await fetchWithRetry(url, { headers: buildHeaders(apiKey) })
-  const data = (await res.json()) as RawRatesResponse
+  try {
+    const url = `${apiBaseUrl}/v1/rates.getRates`
+    const res = await fetchWithRetry(url, { headers: buildHeaders(apiKey) })
+    const data = (await res.json()) as RawRatesResponse
 
-  if (!data || typeof data !== 'object' || !(data as Record<string, unknown>).regular || !(data as Record<string, unknown>).protected) {
-    throw new Error('Lulo API: invalid rates response shape')
+    if (!data || typeof data !== 'object' || !(data as Record<string, unknown>).regular || !(data as Record<string, unknown>).protected) {
+      throw new Error('Lulo API: invalid rates response shape')
+    }
+
+    // Convert from percentage to decimal
+    const rates: LuloRates = {
+      regularApy: data.regular.CURRENT / 100,
+      protectedApy: data.protected.CURRENT / 100,
+      regular24hApy: data.regular['24HR'] / 100,
+      protected24hApy: data.protected['24HR'] / 100,
+    }
+
+    ratesCache.set('rates', rates)
+    return rates
+  } catch (err) {
+    if (cached?.stale) return cached.value
+    throw err
   }
-
-  // Convert from percentage to decimal
-  const rates: LuloRates = {
-    regularApy: data.regular.CURRENT / 100,
-    protectedApy: data.protected.CURRENT / 100,
-    regular24hApy: data.regular['24HR'] / 100,
-    protected24hApy: data.protected['24HR'] / 100,
-  }
-
-  ratesCache.set('rates', rates)
-  return rates
 }
 
 /**
@@ -120,22 +125,27 @@ export async function fetchLuloPoolData(
   const cachedPool = poolCache.get('pool')
   if (cachedPool && !cachedPool.stale) return cachedPool.value
 
-  const url = `${apiBaseUrl}/v1/pool.getPools`
-  const res = await fetchWithRetry(url, { headers: buildHeaders(apiKey) })
-  const data = (await res.json()) as RawPoolResponse
+  try {
+    const url = `${apiBaseUrl}/v1/pool.getPools`
+    const res = await fetchWithRetry(url, { headers: buildHeaders(apiKey) })
+    const data = (await res.json()) as RawPoolResponse
 
-  if (!data || typeof data !== 'object' || typeof (data as Record<string, unknown>).totalLiquidity !== 'number') {
-    throw new Error('Lulo API: invalid pool response shape')
+    if (!data || typeof data !== 'object' || typeof (data as Record<string, unknown>).totalLiquidity !== 'number') {
+      throw new Error('Lulo API: invalid pool response shape')
+    }
+
+    const pool: LuloPoolData = {
+      totalLiquidity: data.totalLiquidity,
+      availableLiquidity: data.availableLiquidity,
+      regularApy: data.regular.apy,
+      protectedApy: data.protected.apy,
+      averagePoolRate: data.averagePoolRate,
+    }
+
+    poolCache.set('pool', pool)
+    return pool
+  } catch (err) {
+    if (cachedPool?.stale) return cachedPool.value
+    throw err
   }
-
-  const pool: LuloPoolData = {
-    totalLiquidity: data.totalLiquidity,
-    availableLiquidity: data.availableLiquidity,
-    regularApy: data.regular.apy,
-    protectedApy: data.protected.apy,
-    averagePoolRate: data.averagePoolRate,
-  }
-
-  poolCache.set('pool', pool)
-  return pool
 }
