@@ -4,7 +4,10 @@ use anchor_spl::token::{self, Burn, Mint, MintTo, Token, TokenAccount, Transfer}
 pub mod errors;
 pub mod state;
 
+pub mod events;
+
 use errors::AllocatorError;
+use events::*;
 use state::*;
 
 declare_id!("2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P");
@@ -254,6 +257,14 @@ pub mod nanuqfi_allocator {
       position.high_water_mark_price = current_price;
     }
 
+    emit!(DepositEvent {
+      user: ctx.accounts.user.key(),
+      risk_vault: vault.key(),
+      amount,
+      shares_minted: shares,
+      slot: clock.slot,
+    });
+
     Ok(())
   }
 
@@ -300,6 +311,14 @@ pub mod nanuqfi_allocator {
     } else {
       SHARE_PRICE_PRECISION // 1:1 fallback
     };
+
+    emit!(WithdrawRequestEvent {
+      user: ctx.accounts.user.key(),
+      risk_vault: ctx.accounts.risk_vault.key(),
+      shares,
+      share_price: position.request_time_share_price,
+      slot: clock.slot,
+    });
 
     Ok(())
   }
@@ -482,6 +501,16 @@ pub mod nanuqfi_allocator {
         .ok_or(AllocatorError::MathOverflow)?;
       position.high_water_mark_price = new_price;
     }
+
+    let clock_emit = Clock::get()?;
+    emit!(WithdrawEvent {
+      user: ctx.accounts.user.key(),
+      risk_vault: vault.key(),
+      shares_burned: shares,
+      net_usdc,
+      performance_fee,
+      slot: clock_emit.slot,
+    });
 
     Ok(())
   }
@@ -695,6 +724,13 @@ pub mod nanuqfi_allocator {
       .checked_add(1)
       .ok_or(AllocatorError::MathOverflow)?;
 
+    emit!(RebalanceEvent {
+      risk_vault: vault.key(),
+      counter: vault.rebalance_counter.saturating_sub(1),
+      equity_snapshot,
+      slot: clock.slot,
+    });
+
     Ok(())
   }
 
@@ -703,6 +739,8 @@ pub mod nanuqfi_allocator {
   pub fn emergency_halt(ctx: Context<EmergencyHalt>) -> Result<()> {
     ctx.accounts.allocator.halted = true;
     msg!("Allocator halted by admin");
+    let clock = Clock::get()?;
+    emit!(EmergencyHaltEvent { admin: ctx.accounts.admin.key(), halted: true, slot: clock.slot });
     Ok(())
   }
 
@@ -711,6 +749,8 @@ pub mod nanuqfi_allocator {
   pub fn resume(ctx: Context<Resume>) -> Result<()> {
     ctx.accounts.allocator.halted = false;
     msg!("Allocator resumed by admin");
+    let clock = Clock::get()?;
+    emit!(EmergencyHaltEvent { admin: ctx.accounts.admin.key(), halted: false, slot: clock.slot });
     Ok(())
   }
 
@@ -769,6 +809,12 @@ pub mod nanuqfi_allocator {
     vault.redemption_period_slots = new_redemption_period_slots;
 
     msg!("Guardrails tightened");
+    let clock = Clock::get()?;
+    emit!(GuardrailUpdateEvent {
+      risk_vault: vault.key(),
+      admin: ctx.accounts.admin.key(),
+      slot: clock.slot,
+    });
     Ok(())
   }
 
@@ -853,6 +899,14 @@ pub mod nanuqfi_allocator {
       .ok_or(AllocatorError::ArithmeticOverflow)?;
 
     msg!("Treasury withdrawal: {} USDC", amount);
+    let clock = Clock::get()?;
+    emit!(TreasuryWithdrawEvent {
+      admin: ctx.accounts.admin.key(),
+      amount,
+      total_collected: treasury.total_fees_collected,
+      total_withdrawn: treasury.total_fees_withdrawn,
+      slot: clock.slot,
+    });
     Ok(())
   }
 
@@ -933,6 +987,7 @@ pub mod nanuqfi_allocator {
     );
     allocator.protocol_whitelist.push(protocol);
     msg!("Protocol whitelisted: {}", protocol);
+    emit!(ProtocolWhitelistEvent { protocol, added: true, slot: Clock::get()?.slot });
     Ok(())
   }
 
@@ -945,6 +1000,7 @@ pub mod nanuqfi_allocator {
       .ok_or(AllocatorError::ProtocolNotWhitelisted)?;
     allocator.protocol_whitelist.remove(idx);
     msg!("Protocol removed from whitelist: {}", protocol);
+    emit!(ProtocolWhitelistEvent { protocol, added: false, slot: Clock::get()?.slot });
     Ok(())
   }
 
@@ -987,6 +1043,13 @@ pub mod nanuqfi_allocator {
     )?;
 
     msg!("Allocated {} USDC to protocol", amount);
+    emit!(AllocationEvent {
+      risk_vault: ctx.accounts.risk_vault.key(),
+      protocol: ctx.accounts.protocol_usdc.owner,
+      amount,
+      direction: 0,
+      slot: Clock::get()?.slot,
+    });
     Ok(())
   }
 
@@ -1013,6 +1076,13 @@ pub mod nanuqfi_allocator {
     )?;
 
     msg!("Recalled {} USDC from protocol", amount);
+    emit!(AllocationEvent {
+      risk_vault: ctx.accounts.risk_vault.key(),
+      protocol: ctx.accounts.protocol_usdc.owner,
+      amount,
+      direction: 1,
+      slot: Clock::get()?.slot,
+    });
     Ok(())
   }
 
