@@ -5,10 +5,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-nanuqfi_allocator = "2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P"
+nanuqfi_allocator = "CDhkMBnc43wJQyVaSrreXk2ojvQvZMWrAWNBLSjaRJxq"
 
 [programs.devnet]
-nanuqfi_allocator = "2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P"
+nanuqfi_allocator = "CDhkMBnc43wJQyVaSrreXk2ojvQvZMWrAWNBLSjaRJxq"
 
 [registry]
 url = "https://api.apr.dev"

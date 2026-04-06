@@ -10,7 +10,7 @@ use errors::AllocatorError;
 use events::*;
 use state::*;
 
-declare_id!("2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P");
+declare_id!("CDhkMBnc43wJQyVaSrreXk2ojvQvZMWrAWNBLSjaRJxq");
 
 /// Management fee: 1% annualized.
 /// Solana produces ~2 slots/sec → ~63_072_000 slots/year.

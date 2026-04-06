@@ -11,7 +11,9 @@
  * Usage: npx tsx scripts/setup-devnet.ts
  */
 
-import { Program, AnchorProvider, Wallet, BN, setProvider } from '@coral-xyz/anchor'
+import * as anchor from '@coral-xyz/anchor'
+const { Program, AnchorProvider, Wallet, setProvider } = anchor
+const BN = anchor.default?.BN ?? anchor.BN ?? (await import('bn.js')).default
 import { Connection, Keypair, PublicKey, SystemProgram } from '@solana/web3.js'
 import {
   TOKEN_PROGRAM_ID,
@@ -25,7 +27,7 @@ import idl from '../target/idl/nanuqfi_allocator.json' assert { type: 'json' }
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const PROGRAM_ID = new PublicKey('2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P')
+const PROGRAM_ID = new PublicKey('CDhkMBnc43wJQyVaSrreXk2ojvQvZMWrAWNBLSjaRJxq')
 const KEEPER_AUTHORITY = new PublicKey('2xRNkCNNbEhr7iDsUdZ252LvAtcHFXUNmpSAM7ad6eyk')
 
 // NanuqFi test USDC mint (admin is mint authority — can mint freely for testing)
