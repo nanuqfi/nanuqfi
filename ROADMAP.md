@@ -58,7 +58,7 @@
 - [x] New SDK modules — fetchWithRetry (exponential backoff), Logger (pluggable), TtlCache (SWR)
 - [x] E2E gate: 9/9 passing
 - [x] Program expanded to 27 instructions (was 21)
-- [x] 357 tests across ecosystem (139 core monorepo + 206 keeper + 12 frontend)
+- [x] 526 tests across ecosystem (308 core monorepo + 206 keeper + 12 frontend)
 - [x] TVL: 200 USDC on devnet
 
 ### Submit (April 17)

@@ -143,7 +143,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 **Hackathon:** Ranger Build-A-Bear — deadline April 17, 2026
 **Domain:** nanuqfi.com (marketing) + app.nanuqfi.com (dashboard) + keeper.nanuqfi.com (API)
 **Phase:** All phases complete. Strategy, risk, technical, production, novelty — all shipped.
-**Tests:** 357 total (45 core + 29 backend-marginfi + 20 backend-kamino + 21 backend-lulo + 24 backtest + 206 keeper + 12 frontend)
+**Tests:** 526 total (57 core + 44 backend-marginfi + 36 backend-kamino + 48 backend-lulo + 24 backtest + 99 Rust allocator + 206 keeper + 12 frontend)
 **Program:** 27 instructions (21 core + 2 whitelist + 2 account close + 1 admin setter + 1 devnet-only)
 **On-chain TVL:** ~260 USDC (moderate: 210, aggressive: 50) — needs redeploy after hardening
 
