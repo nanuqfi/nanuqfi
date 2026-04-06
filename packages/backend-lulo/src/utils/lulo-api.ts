@@ -12,9 +12,9 @@
  *   - pool.getPools  → APY values are already DECIMAL (0.0825 = 8.25%) → no conversion
  */
 
-import { fetchWithRetry, TtlCache } from '@nanuqfi/core'
+import { fetchWithRetry, TtlCache, getEnv } from '@nanuqfi/core'
 
-const DEFAULT_API_BASE = process.env.LULO_API_URL ?? 'https://api.lulo.fi'
+const DEFAULT_API_BASE = getEnv('LULO_API_URL') ?? 'https://api.lulo.fi'
 
 export interface LuloRates {
   regularApy: number
@@ -91,11 +91,13 @@ export async function fetchLuloRates(
   try {
     const url = `${apiBaseUrl}/v1/rates.getRates`
     const res = await fetchWithRetry(url, { headers: buildHeaders(apiKey) })
-    const data = (await res.json()) as RawRatesResponse
+    const raw: unknown = await res.json()
 
-    if (!data || typeof data !== 'object' || !(data as Record<string, unknown>).regular || !(data as Record<string, unknown>).protected) {
+    if (!raw || typeof raw !== 'object' || !(raw as { regular?: unknown }).regular || !(raw as { protected?: unknown }).protected) {
       throw new Error('Lulo API: invalid rates response shape')
     }
+
+    const data = raw as RawRatesResponse
 
     // Convert from percentage to decimal
     const rates: LuloRates = {
@@ -128,11 +130,13 @@ export async function fetchLuloPoolData(
   try {
     const url = `${apiBaseUrl}/v1/pool.getPools`
     const res = await fetchWithRetry(url, { headers: buildHeaders(apiKey) })
-    const data = (await res.json()) as RawPoolResponse
+    const raw: unknown = await res.json()
 
-    if (!data || typeof data !== 'object' || typeof (data as Record<string, unknown>).totalLiquidity !== 'number') {
+    if (!raw || typeof raw !== 'object' || typeof (raw as { totalLiquidity?: unknown }).totalLiquidity !== 'number') {
       throw new Error('Lulo API: invalid pool response shape')
     }
+
+    const data = raw as RawPoolResponse
 
     const pool: LuloPoolData = {
       totalLiquidity: data.totalLiquidity,

@@ -5,9 +5,9 @@
  * Provides both live rates and historical data for backtesting.
  */
 
-import { fetchWithRetry, TtlCache } from '@nanuqfi/core'
+import { fetchWithRetry, TtlCache, getEnv } from '@nanuqfi/core'
 
-const DEFAULT_API_BASE = process.env.KAMINO_API_URL ?? 'https://api.kamino.finance'
+const DEFAULT_API_BASE = getEnv('KAMINO_API_URL') ?? 'https://api.kamino.finance'
 
 export const KAMINO_MAIN_MARKET = '7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF'
 export const KAMINO_USDC_RESERVE = 'D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59'
@@ -103,11 +103,13 @@ export async function fetchHistoricalMetrics(
 ): Promise<KaminoHistoricalPoint[]> {
   const url = `${apiBaseUrl}/kamino-market/${KAMINO_MAIN_MARKET}/reserves/${KAMINO_USDC_RESERVE}/metrics/history`
   const res = await fetchWithRetry(url)
-  const data = (await res.json()) as RawHistoryResponse
+  const raw: unknown = await res.json()
 
-  if (!data || typeof data !== 'object' || !Array.isArray((data as Record<string, unknown>).history)) {
+  if (!raw || typeof raw !== 'object' || !Array.isArray((raw as { history?: unknown }).history)) {
     throw new Error('Kamino API: invalid history response shape')
   }
+
+  const data = raw as RawHistoryResponse
 
   return data.history.map((entry) => ({
     timestamp: new Date(entry.timestamp).getTime(),

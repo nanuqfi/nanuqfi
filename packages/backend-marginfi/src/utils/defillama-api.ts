@@ -12,9 +12,9 @@
  * - Jupiter USDC lending: d783c8df-e2ed-44b4-8317-161ccc1b5f06
  */
 
-import { fetchWithRetry } from '@nanuqfi/core'
+import { fetchWithRetry, getEnv } from '@nanuqfi/core'
 
-const DEFILLAMA_YIELDS_BASE = process.env.DEFILLAMA_API_URL ?? 'https://yields.llama.fi'
+const DEFILLAMA_YIELDS_BASE = getEnv('DEFILLAMA_API_URL') ?? 'https://yields.llama.fi'
 
 export interface HistoricalRatePoint {
   timestamp: number    // epoch ms

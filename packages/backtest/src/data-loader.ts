@@ -1,3 +1,4 @@
+import { getEnv } from '@nanuqfi/core'
 import type { HistoricalDataPoint, BacktestConfig } from './types'
 
 interface RawHistoryEntry {
@@ -12,7 +13,7 @@ interface RawHistoryResponse {
 
 export async function fetchHistoricalData(
   config: BacktestConfig,
-  apiBaseUrl: string = process.env.KAMINO_API_URL ?? 'https://api.kamino.finance'
+  apiBaseUrl: string = getEnv('KAMINO_API_URL') ?? 'https://api.kamino.finance'
 ): Promise<HistoricalDataPoint[]> {
   const market = config.kaminoMarket ?? '7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF'
   const reserve = config.kaminoReserve ?? 'D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59'

@@ -29,5 +29,8 @@ export type { Logger } from './logger'
 export { TtlCache } from './cache'
 export type { Cache, CacheEntry } from './cache'
 
+// Environment
+export { getEnv } from './env'
+
 // Mocks (for consumers' test suites)
 export { MockYieldBackend } from './mocks/mock-yield-backend'
