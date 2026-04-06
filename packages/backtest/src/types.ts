@@ -3,6 +3,8 @@ export interface BacktestConfig {
   marginfiApyMultiplier: number
   luloApyMultiplier: number
   initialDeposit: number
+  kaminoMarket?: string
+  kaminoReserve?: string
 }
 
 export const DEFAULT_BACKTEST_CONFIG: BacktestConfig = {
@@ -10,6 +12,8 @@ export const DEFAULT_BACKTEST_CONFIG: BacktestConfig = {
   marginfiApyMultiplier: 1.08,
   luloApyMultiplier: 1.05,
   initialDeposit: 10000,
+  kaminoMarket: '7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF',
+  kaminoReserve: 'D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59',
 }
 
 export interface HistoricalDataPoint {

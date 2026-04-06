@@ -1,8 +1,5 @@
 import type { HistoricalDataPoint, BacktestConfig } from './types'
 
-const KAMINO_MAIN_MARKET = '7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF'
-const KAMINO_USDC_RESERVE = 'D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59'
-
 interface RawHistoryEntry {
   timestamp: string
   metrics: { supplyInterestAPY: number; borrowInterestAPY: number; depositTvl: string }
@@ -17,7 +14,9 @@ export async function fetchHistoricalData(
   config: BacktestConfig,
   apiBaseUrl: string = process.env.KAMINO_API_URL ?? 'https://api.kamino.finance'
 ): Promise<HistoricalDataPoint[]> {
-  const url = `${apiBaseUrl}/kamino-market/${KAMINO_MAIN_MARKET}/reserves/${KAMINO_USDC_RESERVE}/metrics/history`
+  const market = config.kaminoMarket ?? '7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF'
+  const reserve = config.kaminoReserve ?? 'D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59'
+  const url = `${apiBaseUrl}/kamino-market/${market}/reserves/${reserve}/metrics/history`
   const res = await fetch(url)
 
   if (!res.ok) {
