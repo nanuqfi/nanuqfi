@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * NanuqFi Phase C: Extended Keeper Tests (C11–C20)
  *

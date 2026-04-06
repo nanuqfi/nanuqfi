@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * NanuqFi Phase B: Extended On-Chain Program Tests (B17–B22)
  *
  * Tests update_deposit_cap, update_keeper_authority, rebalance (valid/invalid),
- * and Drift CPI instructions against live devnet accounts.
+ * and protocol allocation instructions against live devnet accounts.
  *
  * Prerequisites:
  * - Allocator program deployed on devnet (setup-devnet.ts)

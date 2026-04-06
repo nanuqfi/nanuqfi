@@ -33,10 +33,6 @@ const KEEPER_AUTHORITY = new PublicKey('2xRNkCNNbEhr7iDsUdZ252LvAtcHFXUNmpSAM7ad
 // via update_treasury_usdc instruction during Phase B testing.
 const USDC_MINT = new PublicKey('BiTXT15XyfSakk5Yz8L8QrzHPWbK8NjoZeEMFrDvKdKh')
 
-// Placeholder Drift vault address (stored for reference, not validated on-chain)
-// Replace with real Drift vault addresses once created via Drift Vault SDK
-const DRIFT_VAULT_PLACEHOLDER = PublicKey.default
-
 // ─── PDA Derivation ────────────────────────────────────────────────────────
 
 const [allocatorPDA] = PublicKey.findProgramAddressSync(
@@ -75,6 +71,7 @@ const wallet = new Wallet(adminKeypair)
 const provider = new AnchorProvider(connection, wallet, { commitment: 'confirmed' })
 setProvider(provider)
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const program = new Program(idl as any, provider)
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -212,7 +209,7 @@ async function initRiskVault(config: VaultConfig): Promise<void> {
       riskVault: vaultPDA,
       allocator: allocatorPDA,
       admin: wallet.publicKey,
-      driftVault: DRIFT_VAULT_PLACEHOLDER,
+      protocolVault: PublicKey.default,
       shareMint: shareMint,
       systemProgram: SystemProgram.programId,
     })

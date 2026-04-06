@@ -27,6 +27,7 @@ const connection = new Connection('https://api.devnet.solana.com', 'confirmed')
 const wallet = new Wallet(adminKeypair)
 const provider = new AnchorProvider(connection, wallet, { commitment: 'confirmed' })
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const program = new Program(idl as any, provider)
 
 const [allocatorPDA] = PublicKey.findProgramAddressSync(
