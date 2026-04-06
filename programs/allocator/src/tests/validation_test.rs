@@ -211,6 +211,14 @@ mod tests {
     assert!(validate_deposit(2_000_000, 10_000_000, 0, 5_000_000, true).is_ok());
   }
 
+  #[test]
+  fn deposit_overflow_current_plus_amount() {
+    // current_assets=1, amount=u64::MAX → checked_add overflows → MathOverflow
+    // deposit_cap=1 activates the checked_add guard (cap > 0 branch)
+    let r = validate_deposit(u64::MAX, 1, 1, 0, false);
+    assert!(is_error(&r, AllocatorError::MathOverflow));
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // validate_rebalance_interval
   // ────────────────────────────────────────────────────────────────────────────

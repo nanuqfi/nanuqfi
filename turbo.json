@@ -9,7 +9,14 @@
       "dependsOn": ["^build"]
     },
     "test:int": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "passThroughEnv": [
+        "KAMINO_INTEGRATION",
+        "MARGINFI_INTEGRATION",
+        "LULO_INTEGRATION",
+        "LULO_API_KEY",
+        "SOLANA_RPC_URL"
+      ]
     },
     "lint": {},
     "clean": {
