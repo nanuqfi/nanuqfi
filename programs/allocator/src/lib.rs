@@ -7,6 +7,9 @@ pub mod state;
 pub mod events;
 pub mod validation;
 
+#[cfg(test)]
+mod tests;
+
 use errors::AllocatorError;
 use events::*;
 use state::*;
