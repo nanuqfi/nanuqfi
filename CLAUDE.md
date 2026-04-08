@@ -18,8 +18,8 @@ NanuqFi is a protocol-agnostic, AI-powered yield routing layer for DeFi. Users d
 |------|---------|------------|------|
 | `nanuqfi/nanuqfi` | **Core monorepo** — SDK packages + Anchor program | TypeScript, Rust/Anchor, pnpm + Turborepo | `~/local-dev/nanuqfi/` |
 | `nanuqfi/nanuqfi-keeper` | **AI Keeper** — strategy bot with algorithm engine + Claude AI | TypeScript, Anthropic SDK | `~/local-dev/nanuqfi-keeper/` |
-| `nanuqfi/nanuqfi-app` | **Frontend** — dashboard with transparency UI | Next.js 15, Tailwind 4, React 19 | `~/local-dev/nanuqfi-app/` |
-| `nanuqfi/nanuqfi-web` | **Marketing site** — landing page at nanuqfi.com | Next.js 16 (static export), Tailwind 4 | `~/local-dev/nanuqfi-web/` |
+| `nanuqfi/nanuqfi-app` | **Frontend** — marketing + dashboard + strategy docs (consolidated) | Next.js 16, Tailwind 4, React 19 | `~/local-dev/nanuqfi-app/` |
+| ~~`nanuqfi/nanuqfi-web`~~ | **ARCHIVED** — marketing consolidated into nanuqfi-app | — | — |
 
 **Organization Mission:** Build the yield routing layer for DeFi — transparent, trustless, AI-enhanced.
 
@@ -121,18 +121,24 @@ docker build -t nanuqfi-keeper . # build Docker image
 
 ---
 
-### 3. nanuqfi/nanuqfi-app
+### 3. nanuqfi/nanuqfi-app (Consolidated Frontend)
 
-**Purpose:** Frontend dashboard with transparency UI — custom components, dark mode, brand-driven
-**Tech Stack:** Next.js 15 (App Router), React 19, Tailwind 4
+**Purpose:** Marketing homepage + yield dashboard + vault management + AI activity log + strategy documentation
+**Tech Stack:** Next.js 16 (App Router), React 19, Tailwind 4, Vitest
 **CLAUDE.md:** See `~/local-dev/nanuqfi-app/CLAUDE.md`
+**Design System:** Pendle glassmorphism + Ethena data UX hybrid
 
 **Key Commands:**
 ```bash
 pnpm dev                        # local dev server
 pnpm build                      # production build
+pnpm test                       # 26 tests (UI components + error mapping)
 pnpm lint                       # ESLint
 ```
+
+**Routes:** `/` (marketing), `/strategy` (hackathon docs), `/app` (dashboard), `/app/vaults` (explorer), `/app/vaults/[riskLevel]` (detail + deposit), `/app/activity` (AI decisions)
+**Components:** 27 total — 8 UI primitives, 12 app components, 7 marketing sections
+**Note:** nanuqfi-web was archived 2026-04-08, marketing consolidated here
 
 ---
 
@@ -141,11 +147,12 @@ pnpm lint                       # ESLint
 See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 
 **Hackathon:** Ranger Build-A-Bear — deadline April 17, 2026
-**Domain:** nanuqfi.com (marketing) + app.nanuqfi.com (dashboard) + keeper.nanuqfi.com (API)
-**Phase:** All phases complete. Strategy, risk, technical, production, novelty — all shipped.
-**Tests:** 526 total (57 core + 44 backend-marginfi + 36 backend-kamino + 48 backend-lulo + 24 backtest + 99 Rust allocator + 206 keeper + 12 frontend)
+**Domain:** nanuqfi.com (marketing + app, consolidated) + app.nanuqfi.com (alias) + keeper.nanuqfi.com (API)
+**Phase:** All phases complete. UI revamped (Pendle + Ethena), transactions wired, strategy docs live.
+**Tests:** 540 total (57 core + 44 backend-marginfi + 36 backend-kamino + 48 backend-lulo + 24 backtest + 99 Rust allocator + 206 keeper + 26 frontend)
 **Program:** 27 instructions (21 core + 2 whitelist + 2 account close + 1 admin setter + 1 devnet-only)
 **On-chain TVL:** ~260 USDC (moderate: 210, aggressive: 50) — needs redeploy after hardening
+**Submission:** Strategy docs at nanuqfi.com/strategy. Video script pending (last blocker).
 
 ---
 
