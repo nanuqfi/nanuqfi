@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="200" viewBox="0 0 800 200">
+  <defs>
+    <!-- Cyan glow gradient -->
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0EA5E9"/>
+      <stop offset="50%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <!-- Subtle background glow -->
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#0EA5E9" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#080B11" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Text glow filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <!-- Subtle line glow -->
+    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#080B11" stop-opacity="0"/>
+      <stop offset="30%" stop-color="#0EA5E9" stop-opacity="0.4"/>
+      <stop offset="70%" stop-color="#0EA5E9" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#080B11" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="200" fill="#080B11" rx="12"/>
+  <rect width="800" height="200" fill="url(#bgGlow)" rx="12"/>
+
+  <!-- Subtle grid pattern -->
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#FFFFFF" stroke-opacity="0.02" stroke-width="0.5"/>
+  </pattern>
+  <rect width="800" height="200" fill="url(#grid)" rx="12"/>
+
+  <!-- Main title -->
+  <text x="400" y="85" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="64" font-weight="800" fill="url(#textGrad)" text-anchor="middle" letter-spacing="6" filter="url(#glow)">NANUQFI</text>
+
+  <!-- Divider line -->
+  <rect x="200" y="105" width="400" height="1" fill="url(#lineGrad)"/>
+
+  <!-- Tagline -->
+  <text x="400" y="135" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="16" font-weight="600" fill="#94A3B8" text-anchor="middle" letter-spacing="4">THE YIELD ROUTING LAYER FOR DEFI</text>
+
+  <!-- Subtitle -->
+  <text x="400" y="165" font-family="ui-monospace, 'SF Mono', monospace" font-size="12" fill="#475569" text-anchor="middle" letter-spacing="1">Deposit USDC. Pick your risk. AI routes your capital.</text>
+
+  <!-- Corner accents -->
+  <rect x="20" y="20" width="24" height="1" fill="#0EA5E9" opacity="0.3"/>
+  <rect x="20" y="20" width="1" height="24" fill="#0EA5E9" opacity="0.3"/>
+  <rect x="756" y="20" width="24" height="1" fill="#0EA5E9" opacity="0.3"/>
+  <rect x="779" y="20" width="1" height="24" fill="#0EA5E9" opacity="0.3"/>
+  <rect x="20" y="179" width="24" height="1" fill="#0EA5E9" opacity="0.3"/>
+  <rect x="20" y="156" width="1" height="24" fill="#0EA5E9" opacity="0.3"/>
+  <rect x="756" y="179" width="24" height="1" fill="#0EA5E9" opacity="0.3"/>
+  <rect x="779" y="156" width="1" height="24" fill="#0EA5E9" opacity="0.3"/>
+</svg>
