@@ -323,7 +323,7 @@ describe('LuloLendingBackend — API key usage', () => {
     await backend.getExpectedYield()
 
     expect(mockFetch).toHaveBeenCalledOnce()
-    const [_url, options] = mockFetch.mock.calls[0]
+    const [, options] = mockFetch.mock.calls[0]
     expect((options?.headers as Record<string, string>)?.['x-api-key']).toBe('my-secret-key')
   })
 
@@ -334,7 +334,7 @@ describe('LuloLendingBackend — API key usage', () => {
     await backend.getRisk()
 
     expect(mockFetch).toHaveBeenCalledOnce()
-    const [_url, options] = mockFetch.mock.calls[0]
+    const [, options] = mockFetch.mock.calls[0]
     expect((options?.headers as Record<string, string>)?.['x-api-key']).toBe('my-secret-key')
   })
 

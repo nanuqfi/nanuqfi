@@ -30,7 +30,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             programs/allocator/target
-          key: cargo-${{ hashFiles('programs/allocator/Cargo.lock') }}
+          key: cargo-${{ hashFiles('Cargo.lock') }}
       - name: Build (zero warnings)
         run: cargo build
         working-directory: programs/allocator
@@ -44,7 +44,7 @@ jobs:
       - name: Audit Rust dependencies
         run: |
           cargo install cargo-audit --quiet
-          cargo audit
+          cargo audit --file ../../Cargo.lock
         working-directory: programs/allocator
 
   integration-test:
