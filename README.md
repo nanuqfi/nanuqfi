@@ -29,25 +29,9 @@
 
 ## Architecture
 
-```
-User                    Keeper (AI)                 On-Chain Program
-  |                         |                            |
-  |-- deposit USDC -------->|                            |
-  |                         |-- score protocols -------->|
-  |                         |-- propose rebalance ------>|
-  |                         |     (weights + reasoning)  |
-  |                         |                            |-- validate guardrails
-  |                         |                            |-- enforce limits
-  |                         |                            |-- emit events
-  |                         |                            |
-  |<-- shares minted -------|                            |
-  |                         |                            |
-  |-- request withdraw ---->|                            |
-  |     (time-locked)       |                            |
-  |<-- USDC returned -------|                            |
-```
-
-**Trust model:** The keeper proposes. The algorithm validates. The program enforces. Users trust auditable on-chain code -- never the operator.
+<div align="center">
+<img src="assets/architecture.svg" alt="NanuqFi Architecture" width="800"/>
+</div>
 
 ---
 
