@@ -15,7 +15,7 @@ use events::*;
 use state::*;
 use validation::*;
 
-declare_id!("CDhkMBnc43wJQyVaSrreXk2ojvQvZMWrAWNBLSjaRJxq");
+declare_id!("2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P");
 
 /// Equity snapshot refresh interval: ~24h at ~2 slots/sec.
 const EQUITY_SNAPSHOT_INTERVAL: u64 = 216_000;
