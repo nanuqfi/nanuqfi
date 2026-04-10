@@ -1181,12 +1181,20 @@ pub struct Deposit<'info> {
   /// USDC mint (for vault_usdc constraint validation)
   pub usdc_mint: Account<'info, Mint>,
 
-  /// User's USDC token account (source)
-  #[account(mut)]
+  /// User's USDC token account (source) — constrained to correct mint
+  #[account(
+    mut,
+    token::mint = usdc_mint,
+    token::authority = user,
+  )]
   pub user_usdc: Account<'info, TokenAccount>,
 
-  /// User's share token account (destination for minted shares)
-  #[account(mut)]
+  /// User's share token account (destination for minted shares) — constrained
+  #[account(
+    mut,
+    token::mint = share_mint,
+    token::authority = user,
+  )]
   pub user_shares: Account<'info, TokenAccount>,
 
   /// Vault's USDC token account — constrained to correct mint + authority
@@ -1265,12 +1273,20 @@ pub struct Withdraw<'info> {
   /// USDC mint (for vault_usdc constraint validation)
   pub usdc_mint: Account<'info, Mint>,
 
-  /// User's share token account (shares to burn)
-  #[account(mut)]
+  /// User's share token account (shares to burn) — constrained
+  #[account(
+    mut,
+    token::mint = share_mint,
+    token::authority = user,
+  )]
   pub user_shares: Account<'info, TokenAccount>,
 
-  /// User's USDC token account (receives withdrawal)
-  #[account(mut)]
+  /// User's USDC token account (receives withdrawal) — constrained
+  #[account(
+    mut,
+    token::mint = usdc_mint,
+    token::authority = user,
+  )]
   pub user_usdc: Account<'info, TokenAccount>,
 
   /// Vault's USDC token account — constrained to correct mint + authority
@@ -1579,8 +1595,11 @@ pub struct AllocateToProtocol<'info> {
     token::authority = allocator,
   )]
   pub vault_usdc: Account<'info, TokenAccount>,
-  /// Protocol's USDC token account (destination)
-  #[account(mut)]
+  /// Protocol's USDC token account (destination) — constrained to correct mint
+  #[account(
+    mut,
+    token::mint = usdc_mint,
+  )]
   pub protocol_usdc: Account<'info, TokenAccount>,
   pub token_program: Program<'info, Token>,
 }
@@ -1595,8 +1614,11 @@ pub struct RecallFromProtocol<'info> {
   pub keeper: Signer<'info>,
   /// USDC mint (for vault_usdc constraint validation)
   pub usdc_mint: Account<'info, Mint>,
-  /// Protocol's USDC token account (source)
-  #[account(mut)]
+  /// Protocol's USDC token account (source) — constrained to correct mint
+  #[account(
+    mut,
+    token::mint = usdc_mint,
+  )]
   pub protocol_usdc: Account<'info, TokenAccount>,
   /// Vault's USDC token account (destination) — constrained
   #[account(
