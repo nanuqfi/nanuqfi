@@ -1614,10 +1614,11 @@ pub struct RecallFromProtocol<'info> {
   pub keeper: Signer<'info>,
   /// USDC mint (for vault_usdc constraint validation)
   pub usdc_mint: Account<'info, Mint>,
-  /// Protocol's USDC token account (source) — constrained to correct mint
+  /// Protocol's USDC token account (source) — constrained to correct mint + allocator authority
   #[account(
     mut,
     token::mint = usdc_mint,
+    token::authority = allocator,
   )]
   pub protocol_usdc: Account<'info, TokenAccount>,
   /// Vault's USDC token account (destination) — constrained
