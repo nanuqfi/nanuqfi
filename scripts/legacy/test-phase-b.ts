@@ -30,7 +30,7 @@ import idl from '../target/idl/nanuqfi_allocator.json' assert { type: 'json' }
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const PROGRAM_ID = new PublicKey('CDhkMBnc43wJQyVaSrreXk2ojvQvZMWrAWNBLSjaRJxq')
+const PROGRAM_ID = new PublicKey('2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P')
 const USDC_MINT = new PublicKey('BiTXT15XyfSakk5Yz8L8QrzHPWbK8NjoZeEMFrDvKdKh')
 const ORIGINAL_KEEPER = new PublicKey('2xRNkCNNbEhr7iDsUdZ252LvAtcHFXUNmpSAM7ad6eyk')
 

@@ -16,7 +16,7 @@ import { resolve } from 'path'
 
 import idl from '../target/idl/nanuqfi_allocator.json' assert { type: 'json' }
 
-const PROGRAM_ID = new PublicKey('CDhkMBnc43wJQyVaSrreXk2ojvQvZMWrAWNBLSjaRJxq')
+const PROGRAM_ID = new PublicKey('2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P')
 
 const adminKeypairPath = resolve(process.env.HOME!, 'Documents/secret/solana-devnet.json')
 const adminKeypair = Keypair.fromSecretKey(
