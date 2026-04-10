@@ -91,59 +91,71 @@ pub fn validate_deposit(
 
 /// ERC-4626 share price with virtual offset for anti-inflation attack.
 /// Returns price scaled by SHARE_PRICE_PRECISION (1_000_000).
-pub fn calculate_share_price(total_assets: u64, total_shares: u64) -> u64 {
+///
+/// Previously returned u64 with `unwrap_or(u128::MAX)` on overflow — replaced
+/// with proper MathOverflow to surface arithmetic failures explicitly.
+pub fn calculate_share_price(total_assets: u64, total_shares: u64) -> Result<u64> {
     if total_shares == 0 || total_assets == 0 {
-        return SHARE_PRICE_PRECISION; // 1:1 for empty vault
+        return Ok(SHARE_PRICE_PRECISION); // 1:1 for empty vault
     }
     let numerator = (total_assets as u128 + VIRTUAL_OFFSET as u128)
         .checked_mul(SHARE_PRICE_PRECISION as u128)
-        .unwrap_or(u128::MAX);
+        .ok_or(AllocatorError::MathOverflow)?;
     let denominator = total_shares as u128 + VIRTUAL_OFFSET as u128;
-    (numerator / denominator) as u64
+    Ok((numerator / denominator) as u64)
 }
 
 /// Calculate shares to mint for a deposit given current vault state.
 /// Uses ERC-4626 with virtual offset.
-pub fn calculate_shares_to_mint(amount: u64, total_assets: u64, total_shares: u64) -> u64 {
+///
+/// Previously used `unwrap_or(0)` on multiplication overflow — replaced with
+/// MathOverflow so callers are never silently given zero shares.
+pub fn calculate_shares_to_mint(amount: u64, total_assets: u64, total_shares: u64) -> Result<u64> {
     if total_shares == 0 {
-        return amount; // First deposit: 1:1
+        return Ok(amount); // First deposit: 1:1
     }
     let numerator = (amount as u128)
         .checked_mul(total_shares as u128 + VIRTUAL_OFFSET as u128)
-        .unwrap_or(0);
+        .ok_or(AllocatorError::MathOverflow)?;
     let denominator = total_assets as u128 + VIRTUAL_OFFSET as u128;
-    (numerator / denominator) as u64
+    Ok((numerator / denominator) as u64)
 }
 
 /// Calculate management fee accrued over slots_elapsed.
 /// Returns fee in asset units (USDC base).
-pub fn calculate_management_fee(total_assets: u64, slots_elapsed: u64) -> u64 {
+///
+/// Previously used `unwrap_or(0)` on intermediate multiplications — replaced
+/// with MathOverflow so unexpectedly large TVL/slot-counts fail explicitly.
+pub fn calculate_management_fee(total_assets: u64, slots_elapsed: u64) -> Result<u64> {
     let fee_128 = (total_assets as u128)
         .checked_mul(MGMT_FEE_PER_SLOT_SCALED as u128)
-        .unwrap_or(0)
+        .ok_or(AllocatorError::MathOverflow)?
         .checked_mul(slots_elapsed as u128)
-        .unwrap_or(0)
+        .ok_or(AllocatorError::MathOverflow)?
         / (MGMT_FEE_PRECISION as u128 * BPS_DENOMINATOR as u128);
-    fee_128 as u64
+    Ok(fee_128 as u64)
 }
 
 /// Calculate performance fee on gains above high-water mark.
 /// Returns fee in USDC base units.
+///
+/// Previously used `unwrap_or(0)` on gain × shares multiplication — replaced
+/// with MathOverflow so overflow is surfaced rather than silently zeroed.
 pub fn calculate_performance_fee(
     current_share_price: u64,
     hwm_price: u64,
     shares_burned: u64,
-) -> u64 {
+) -> Result<u64> {
     if current_share_price <= hwm_price {
-        return 0; // No gains above HWM
+        return Ok(0); // No gains above HWM
     }
     let gain_per_share = current_share_price - hwm_price;
     let total_gain = (gain_per_share as u128)
         .checked_mul(shares_burned as u128)
-        .unwrap_or(0)
+        .ok_or(AllocatorError::MathOverflow)?
         / SHARE_PRICE_PRECISION as u128;
     let fee = total_gain * PERFORMANCE_FEE_BPS as u128 / BPS_DENOMINATOR as u128;
-    fee as u64
+    Ok(fee as u64)
 }
 
 /// Check oracle divergence: |snapshot - on_chain| / on_chain <= threshold.

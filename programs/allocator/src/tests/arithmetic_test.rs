@@ -7,32 +7,32 @@ mod tests {
   };
 
   // ──────────────────────────────────────────────────────────────────────────────
-  // calculate_share_price
+  // calculate_share_price  (returns Result<u64>)
   // ──────────────────────────────────────────────────────────────────────────────
 
   #[test]
   fn share_price_empty_vault_returns_precision() {
     // Both zero → first-deposit sentinel: 1:1 ratio
-    assert_eq!(calculate_share_price(0, 0), SHARE_PRICE_PRECISION);
+    assert_eq!(calculate_share_price(0, 0).unwrap(), SHARE_PRICE_PRECISION);
   }
 
   #[test]
   fn share_price_zero_assets_returns_precision() {
     // assets=0 is treated the same as empty vault
-    assert_eq!(calculate_share_price(0, 1_000_000), SHARE_PRICE_PRECISION);
+    assert_eq!(calculate_share_price(0, 1_000_000).unwrap(), SHARE_PRICE_PRECISION);
   }
 
   #[test]
   fn share_price_zero_shares_returns_precision() {
     // shares=0 is treated the same as empty vault
-    assert_eq!(calculate_share_price(1_000_000, 0), SHARE_PRICE_PRECISION);
+    assert_eq!(calculate_share_price(1_000_000, 0).unwrap(), SHARE_PRICE_PRECISION);
   }
 
   #[test]
   fn share_price_equal_assets_and_shares_returns_precision() {
     // With virtual offset: (1M + 1M) * 1M / (1M + 1M) = 1M exactly
     assert_eq!(
-      calculate_share_price(1_000_000, 1_000_000),
+      calculate_share_price(1_000_000, 1_000_000).unwrap(),
       SHARE_PRICE_PRECISION
     );
   }
@@ -40,7 +40,7 @@ mod tests {
   #[test]
   fn share_price_double_assets_returns_one_and_half() {
     // assets=2M, shares=1M → (2M + 1M) * 1M / (1M + 1M) = 3M * 1M / 2M = 1_500_000
-    assert_eq!(calculate_share_price(2_000_000, 1_000_000), 1_500_000);
+    assert_eq!(calculate_share_price(2_000_000, 1_000_000).unwrap(), 1_500_000);
   }
 
   #[test]
@@ -49,7 +49,7 @@ mod tests {
     // (assets + VIRTUAL_OFFSET) * PRECISION / (shares + VIRTUAL_OFFSET)
     // ≈ (10^13 + 10^6) * 10^6 / (10^13 + 10^6) = 10^6 exactly
     let large = 10_000_000_000_000u64; // ~10B USDC at 6 decimals
-    assert_eq!(calculate_share_price(large, large), SHARE_PRICE_PRECISION);
+    assert_eq!(calculate_share_price(large, large).unwrap(), SHARE_PRICE_PRECISION);
   }
 
   #[test]
@@ -57,26 +57,34 @@ mod tests {
     // If an attacker donates 1 USDC to an otherwise empty vault (1 share minted),
     // the virtual offset means price is (1M + 1M) * 1M / (1 + 1M) ≈ 2M * 1M / 1_000_001 ≈ 1_999_998
     // instead of the unbounded ratio without virtual offset.
-    let price = calculate_share_price(1_000_000, 1);
+    let price = calculate_share_price(1_000_000, 1).unwrap();
     // Price should be high (donated assets), but bounded by virtual offset
     assert!(price > SHARE_PRICE_PRECISION);
     assert!(price < 2 * SHARE_PRICE_PRECISION);
   }
 
+  #[test]
+  fn share_price_never_panics_on_extreme_u64_inputs() {
+    // u64 inputs cannot overflow u128 in this formula (max numerator ≈ 1.8×10^25, u128::MAX ≈ 3.4×10^38).
+    // Verify the function returns Ok (not Err, not panic) with boundary values.
+    assert!(calculate_share_price(u64::MAX, u64::MAX).is_ok());
+    assert!(calculate_share_price(u64::MAX, 1).is_ok());
+  }
+
   // ──────────────────────────────────────────────────────────────────────────────
-  // calculate_shares_to_mint
+  // calculate_shares_to_mint  (returns Result<u64>)
   // ──────────────────────────────────────────────────────────────────────────────
 
   #[test]
   fn shares_to_mint_first_deposit_returns_amount() {
     // When total_shares == 0, bypass the formula and return amount 1:1
-    assert_eq!(calculate_shares_to_mint(5_000_000, 0, 0), 5_000_000);
+    assert_eq!(calculate_shares_to_mint(5_000_000, 0, 0).unwrap(), 5_000_000);
   }
 
   #[test]
   fn shares_to_mint_first_deposit_regardless_of_assets() {
     // total_shares=0 always takes the early-return path, assets are irrelevant
-    assert_eq!(calculate_shares_to_mint(1_000_000, 999_999_999, 0), 1_000_000);
+    assert_eq!(calculate_shares_to_mint(1_000_000, 999_999_999, 0).unwrap(), 1_000_000);
   }
 
   #[test]
@@ -86,7 +94,7 @@ mod tests {
     // den = 1M + 1M = 2M
     // result = 2*10^12 / 2M = 1_000_000
     assert_eq!(
-      calculate_shares_to_mint(1_000_000, 1_000_000, 1_000_000),
+      calculate_shares_to_mint(1_000_000, 1_000_000, 1_000_000).unwrap(),
       1_000_000
     );
   }
@@ -98,28 +106,34 @@ mod tests {
     // den = 2M + 1M = 3M
     // result = 2*10^12 / 3M = 666_666
     assert_eq!(
-      calculate_shares_to_mint(1_000_000, 2_000_000, 1_000_000),
+      calculate_shares_to_mint(1_000_000, 2_000_000, 1_000_000).unwrap(),
       666_666
     );
   }
 
   #[test]
   fn shares_to_mint_zero_amount_returns_zero() {
-    assert_eq!(calculate_shares_to_mint(0, 1_000_000, 1_000_000), 0);
+    assert_eq!(calculate_shares_to_mint(0, 1_000_000, 1_000_000).unwrap(), 0);
+  }
+
+  #[test]
+  fn shares_to_mint_overflow_returns_error() {
+    // amount=u64::MAX, shares+VIRTUAL_OFFSET overflows u128 multiplication
+    assert!(calculate_shares_to_mint(u64::MAX, 0, u64::MAX).is_err());
   }
 
   // ──────────────────────────────────────────────────────────────────────────────
-  // calculate_management_fee
+  // calculate_management_fee  (returns Result<u64>)
   // ──────────────────────────────────────────────────────────────────────────────
 
   #[test]
   fn mgmt_fee_zero_assets_returns_zero() {
-    assert_eq!(calculate_management_fee(0, 63_072_000), 0);
+    assert_eq!(calculate_management_fee(0, 63_072_000).unwrap(), 0);
   }
 
   #[test]
   fn mgmt_fee_zero_slots_returns_zero() {
-    assert_eq!(calculate_management_fee(1_000_000, 0), 0);
+    assert_eq!(calculate_management_fee(1_000_000, 0).unwrap(), 0);
   }
 
   #[test]
@@ -129,7 +143,7 @@ mod tests {
     // For total_assets=1000 over 1 year the fee comes out to ~999_993 ≈ 1 USDC (1_000_000).
     // Verify within 1% tolerance of the target (999_993 vs 1_000_000).
     let slots_per_year: u64 = 63_072_000;
-    let fee = calculate_management_fee(1_000, slots_per_year);
+    let fee = calculate_management_fee(1_000, slots_per_year).unwrap();
     let expected: u64 = 999_993; // computed: 1000 * 158548 * 63072000 / 10_000_000_000
     let tolerance = expected / 100; // 1%
     assert!(
@@ -142,8 +156,8 @@ mod tests {
   fn mgmt_fee_doubles_with_double_tvl() {
     // Fee is linear in total_assets: double TVL → double fee
     let slots: u64 = 63_072_000;
-    let fee_single = calculate_management_fee(100_000_000, slots);
-    let fee_double = calculate_management_fee(200_000_000, slots);
+    let fee_single = calculate_management_fee(100_000_000, slots).unwrap();
+    let fee_double = calculate_management_fee(200_000_000, slots).unwrap();
     // Should be exactly 2×, or within rounding (±1)
     assert!(
       fee_double >= fee_single * 2 - 1 && fee_double <= fee_single * 2 + 1,
@@ -155,8 +169,8 @@ mod tests {
   fn mgmt_fee_proportional_to_slots() {
     // Fee is linear in slots_elapsed: double time → double fee
     let assets: u64 = 10_000_000;
-    let fee_half_year = calculate_management_fee(assets, 31_536_000);
-    let fee_full_year = calculate_management_fee(assets, 63_072_000);
+    let fee_half_year = calculate_management_fee(assets, 31_536_000).unwrap();
+    let fee_full_year = calculate_management_fee(assets, 63_072_000).unwrap();
     // Should be exactly 2× within ±1 rounding
     assert!(
       fee_full_year >= fee_half_year * 2 - 1 && fee_full_year <= fee_half_year * 2 + 1,
@@ -164,15 +178,21 @@ mod tests {
     );
   }
 
+  #[test]
+  fn mgmt_fee_overflow_returns_error() {
+    // u64::MAX total_assets × MGMT_FEE_PER_SLOT_SCALED overflows u128 → Err
+    assert!(calculate_management_fee(u64::MAX, u64::MAX).is_err());
+  }
+
   // ──────────────────────────────────────────────────────────────────────────────
-  // calculate_performance_fee
+  // calculate_performance_fee  (returns Result<u64>)
   // ──────────────────────────────────────────────────────────────────────────────
 
   #[test]
   fn perf_fee_no_gains_returns_zero() {
     // current_price == hwm_price → no gain
     assert_eq!(
-      calculate_performance_fee(1_000_000, 1_000_000, 100_000_000),
+      calculate_performance_fee(1_000_000, 1_000_000, 100_000_000).unwrap(),
       0
     );
   }
@@ -181,7 +201,7 @@ mod tests {
   fn perf_fee_below_hwm_returns_zero() {
     // current < hwm → loss, not above HWM
     assert_eq!(
-      calculate_performance_fee(900_000, 1_000_000, 100_000_000),
+      calculate_performance_fee(900_000, 1_000_000, 100_000_000).unwrap(),
       0
     );
   }
@@ -193,7 +213,7 @@ mod tests {
     // total_gain = 100_000 * 100_000_000 / 1_000_000 = 10_000_000
     // fee = 10_000_000 * 1000 / 10_000 = 1_000_000
     assert_eq!(
-      calculate_performance_fee(1_100_000, 1_000_000, 100_000_000),
+      calculate_performance_fee(1_100_000, 1_000_000, 100_000_000).unwrap(),
       1_000_000
     );
   }
@@ -201,15 +221,22 @@ mod tests {
   #[test]
   fn perf_fee_zero_shares_returns_zero() {
     // No shares burned → no fee, even with price gain
-    assert_eq!(calculate_performance_fee(1_100_000, 1_000_000, 0), 0);
+    assert_eq!(calculate_performance_fee(1_100_000, 1_000_000, 0).unwrap(), 0);
   }
 
   #[test]
   fn perf_fee_scales_with_shares_burned() {
     // Double the shares burned → double the fee
-    let fee_100m = calculate_performance_fee(1_100_000, 1_000_000, 100_000_000);
-    let fee_200m = calculate_performance_fee(1_100_000, 1_000_000, 200_000_000);
+    let fee_100m = calculate_performance_fee(1_100_000, 1_000_000, 100_000_000).unwrap();
+    let fee_200m = calculate_performance_fee(1_100_000, 1_000_000, 200_000_000).unwrap();
     assert_eq!(fee_200m, fee_100m * 2);
+  }
+
+  #[test]
+  fn perf_fee_never_panics_on_extreme_u64_inputs() {
+    // gain_per_share * shares_burned fits in u128: (u64::MAX)^2 = 2^128 - 2^65 + 1 < u128::MAX.
+    // Verify the function returns Ok (not Err, not panic) with boundary values.
+    assert!(calculate_performance_fee(u64::MAX, 1, u64::MAX).is_ok());
   }
 
   // ──────────────────────────────────────────────────────────────────────────────

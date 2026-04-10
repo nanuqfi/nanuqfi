@@ -26,7 +26,8 @@
   },
   "pnpm": {
     "overrides": {
-      "@solana/web3.js": "1.98.4"
+      "@solana/web3.js": "1.98.4",
+      "vite": "7.3.2"
     }
   },
   "dependencies": {

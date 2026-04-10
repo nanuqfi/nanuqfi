@@ -71,4 +71,46 @@ describe('TtlCache', () => {
 
     expect(cache.get('rate')!.value).toBe(0.08)
   })
+
+  it('evicts oldest entry when maxSize is reached', () => {
+    const cache = new TtlCache<number>(10000, undefined, 3)
+    cache.set('a', 1)
+    cache.set('b', 2)
+    cache.set('c', 3)
+
+    // Inserting 'd' triggers eviction of 'a' (oldest)
+    cache.set('d', 4)
+
+    expect(cache.get('a')).toBeUndefined()
+    expect(cache.get('b')!.value).toBe(2)
+    expect(cache.get('c')!.value).toBe(3)
+    expect(cache.get('d')!.value).toBe(4)
+  })
+
+  it('updating an existing key does not trigger eviction', () => {
+    const cache = new TtlCache<number>(10000, undefined, 2)
+    cache.set('a', 1)
+    cache.set('b', 2)
+
+    // Overwriting 'a' must not evict 'b'
+    cache.set('a', 99)
+
+    expect(cache.get('a')!.value).toBe(99)
+    expect(cache.get('b')!.value).toBe(2)
+  })
+
+  it('default maxSize allows up to 1000 entries without eviction', () => {
+    const cache = new TtlCache<number>(10000)
+    for (let i = 0; i < 1000; i++) {
+      cache.set(`key-${i}`, i)
+    }
+    // All 1000 should still be present
+    expect(cache.get('key-0')!.value).toBe(0)
+    expect(cache.get('key-999')!.value).toBe(999)
+
+    // Adding one more should evict key-0
+    cache.set('key-1000', 1000)
+    expect(cache.get('key-0')).toBeUndefined()
+    expect(cache.get('key-1000')!.value).toBe(1000)
+  })
 })
