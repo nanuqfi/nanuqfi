@@ -47,37 +47,35 @@
 - [x] `/v1/backtest` endpoint — serves historical performance proof
 - [x] Allocator program — `allocate_to_protocol` / `recall_from_protocol` (generic, not Drift-specific)
 
-### Production Hardening (COMPLETE — 26/26 issues closed)
-- [x] vault_usdc constraints — all token accounts validated against expected mint
-- [x] Checked math — every arithmetic op uses checked_add/sub/mul/div
-- [x] Share inflation protection — minimum deposit, share price manipulation prevented
-- [x] Protocol whitelist — add/remove whitelisted protocol instructions
-- [x] Event emission — all state-changing instructions emit Anchor events
-- [x] Devnet-gated admin utils — admin_set_tvl restricted to non-mainnet
-- [x] Account close instructions — close_user_position, close_rebalance_record (rent reclaim)
-- [x] New SDK modules — fetchWithRetry (exponential backoff), Logger (pluggable), TtlCache (SWR)
-- [x] E2E gate: 9/9 passing
-- [x] Program expanded to 27 instructions (was 21)
-- [x] 526 tests across ecosystem (308 core monorepo + 206 keeper + 12 frontend)
-- [x] TVL: 200 USDC on devnet
+### Production Hardening + Full Security Audit (COMPLETE — 49/49 issues closed)
+- [x] All P0-critical: token constraints on all user/protocol accounts, devnet feature gate, RPC key proxy, share price math, await rebalance
+- [x] All critical: real on-chain addresses for rebalance, per-vault PDA counter, live Marginfi rates
+- [x] All high: security headers (app + keeper), API rate limiting, error boundaries, catch block logging
+- [x] All P1-hardening: program ID reconciliation, input validation, USDC mint alignment, confirmTransaction fix, Tailwind static classes, network validation, SIGINT handler, config validation, AI strategy validation, alert throttling, Docker hardening, AbortController wiring
+- [x] All P2-cleanup: TtlCache bounds, share price dedup, Anchor tests, dead code removal, backtest tests, keypair validation, structured logging, metrics endpoint, fallback alerting, sitemap/robots/OG, accessibility, error reporting, RPC dedup
+- [x] 756 tests across ecosystem (337 core + 322 keeper + 97 frontend)
+- [x] 0 open issues across all repos
 
 ### Submit (April 17)
 - [ ] Demo video (3 min max)
 - [ ] Tweet via X API
-- [ ] Strategy doc update
-- [ ] README.md for all repos
+- [x] Strategy doc at nanuqfi.com/strategy
+- [x] README.md synced for all repos
 
 ---
 
 ## Phase 2: Mainnet Readiness (April - May 2026)
 
-- [x] Production hardening — 26/26 issues complete (see Phase 1)
-- [x] Keeper monitoring (Telegram alerts live, UptimeRobot pending)
-- [ ] Security review of allocator program (external audit)
+- [x] Full security audit — 49/49 issues resolved across 3 repos
+- [x] Token account constraints — all user/protocol token accounts validated
+- [x] Error handling hardening — error boundaries, catch logging, graceful shutdown
+- [x] API security — headers, rate limiting, CORS, config validation
+- [x] Keeper monitoring — Telegram alerts, throttling, structured logging, /v1/metrics
+- [ ] External security review of allocator program (third-party audit)
 - [ ] Upgrade authority → Squads multisig
 - [ ] Real devnet testing with live Marginfi/Kamino/Lulo vaults
 - [ ] Mainnet deployment
-- [ ] First depositors (seed TVL from hackathon win)
+- [ ] First depositors (seed TVL)
 
 ---
 

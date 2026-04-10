@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/nanuqfi/nanuqfi/actions/workflows/ci.yml/badge.svg)](https://github.com/nanuqfi/nanuqfi/actions/workflows/ci.yml)
 [![License: BSL-1.1](https://img.shields.io/badge/License-BSL--1.1-blue.svg)](LICENSE)
-[![Tests: 540](https://img.shields.io/badge/Tests-540-brightgreen.svg)](#tests)
+[![Tests: 756](https://img.shields.io/badge/Tests-756-brightgreen.svg)](#tests)
 [![Solana](https://img.shields.io/badge/Solana-devnet-9945FF.svg)](https://solana.com)
 [![Rust](https://img.shields.io/badge/Rust-Anchor%200.30.1-dea584.svg)](https://www.anchor-lang.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6.svg)](https://www.typescriptlang.org)
@@ -67,6 +67,12 @@ Every line written as if it ships to mainnet tonight:
 - **Cumulative fee accounting** -- `total_fees_collected` is append-only; separate `total_fees_withdrawn` counter
 - **Per-transaction deposit limits** -- prevents flash-loan-style attacks
 - **Guardrail bounds** -- admin can't set redemption period below minimum safe value
+- **Full token account validation** -- `user_usdc`, `user_shares`, `protocol_usdc` all constrained to correct mint + authority
+- **Error boundaries** -- three-layer error catching (root, app, global) prevents white-screen crashes
+- **API hardening** -- security headers, rate limiting, CORS restriction, input validation
+- **Graceful shutdown** -- SIGINT/SIGTERM handlers with 5s grace period
+- **Config validation** -- fail-fast on invalid keeper configuration at startup
+- **Structured logging** -- JSON logger with /v1/metrics endpoint
 
 ### SDK Packages
 
@@ -103,7 +109,7 @@ The router consistently outperforms any single-protocol strategy by dynamically 
 pnpm install                    # install deps
 pnpm turbo build                # compile all packages
 pnpm turbo lint                 # ESLint strict mode
-pnpm turbo test                 # 308 tests across 6 packages
+pnpm turbo test                 # 337 tests across 6 packages
 anchor build                    # build Anchor program
 anchor deploy --provider.cluster devnet   # deploy to devnet
 npx tsx scripts/setup-devnet.ts           # initialize accounts
@@ -121,11 +127,11 @@ npx tsx scripts/e2e-gate.ts               # run E2E gate (9 steps)
 | `@nanuqfi/backend-kamino` | 36 |
 | `@nanuqfi/backend-lulo` | 48 |
 | `@nanuqfi/backtest` | 24 |
-| Rust allocator | 99 |
-| **Core monorepo** | **308** |
-| nanuqfi-keeper | 206 |
-| nanuqfi-app | 26 |
-| **Ecosystem total** | **540** |
+| Rust allocator (cache + tests) | 128 |
+| **Core monorepo** | **337** |
+| nanuqfi-keeper | 322 |
+| nanuqfi-app | 97 |
+| **Ecosystem total** | **756** |
 
 CI runs on every push: build, lint, test, `pnpm audit`, `cargo audit`.
 
