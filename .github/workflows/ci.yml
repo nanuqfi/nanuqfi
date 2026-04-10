@@ -41,6 +41,16 @@ jobs:
         working-directory: programs/allocator
         env:
           RUSTFLAGS: "-D warnings"
+      - name: Build with devnet features
+        run: cargo build --features devnet
+        working-directory: programs/allocator
+        env:
+          RUSTFLAGS: "-D warnings"
+      - name: Test with devnet features
+        run: cargo test --features devnet
+        working-directory: programs/allocator
+        env:
+          RUSTFLAGS: "-D warnings"
       - name: Audit Rust dependencies
         run: |
           cargo install cargo-audit --quiet
