@@ -81,6 +81,8 @@ packages/
   backtest/          → @nanuqfi/backtest (historical simulation engine — CAGR, Sharpe, Sortino, drawdown)
 programs/
   allocator/         → Anchor program (27 instructions, on-chain guardrails + protocol whitelist + events + account close)
+  nanuqfi-adaptor/   → Ranger Earn adaptor (3 instructions: initialize, deposit, withdraw)
+  mock-ranger-vault/ → Mock Ranger vault for E2E testing (3 instructions, devnet-only)
 scripts/
   setup-devnet.ts    → Initialize allocator accounts on devnet
   e2e-gate.ts        → 10-step pre-mainnet E2E test
@@ -93,6 +95,8 @@ scripts/
 - `packages/core/src/router.ts` — YieldRouter with circuit breaker
 - `packages/core/src/strategy.ts` — BaseVaultStrategy
 - `programs/allocator/src/lib.rs` — All 27 instructions (alloc/recall + whitelist + close + events)
+- `programs/nanuqfi-adaptor/src/lib.rs` — Ranger Earn adaptor (3 instructions + 6 unit tests)
+- `programs/mock-ranger-vault/src/lib.rs` — Mock Ranger vault for devnet CPI testing
 - `programs/allocator/src/state.rs` — Account structs with version fields (Allocator, RiskVault, UserPosition, etc.)
 - `programs/allocator/src/events.rs` — 9 event structs (Deposit, Withdraw, Rebalance, Allocation, etc.)
 - `programs/allocator/src/errors.rs` — Error codes including ArithmeticUnderflow, ProtocolNotWhitelisted, etc.
@@ -100,7 +104,10 @@ scripts/
 - `docs/superpowers/specs/2026-03-15-nanuqfi-integration-design.md` — Integration spec
 - `docs/superpowers/plans/2026-03-15-nanuqfi-implementation.md` — Implementation plan
 
-**Program ID:** `2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P`
+**Program IDs:**
+- Allocator: `2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P`
+- Ranger Adaptor: `HsNnmuB18pA2U24K4Stc1yan67Cx96gmvGRqBUqRFWwY`
+- Mock Ranger Vault: `FCW6LsSvGAv3UdLixCkm4vygifxR1sVBonuserqFe9Fm` (devnet test-only)
 
 ---
 
@@ -149,8 +156,8 @@ See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 **Hackathon:** Ranger Build-A-Bear — deadline April 17, 2026
 **Domain:** nanuqfi.com (marketing + app, consolidated) + app.nanuqfi.com (alias) + keeper.nanuqfi.com (API)
 **Phase:** All phases complete. UI revamped (Pendle + Ethena), transactions wired, strategy docs live.
-**Tests:** 824 total — 337 core monorepo (212 TS + 125 Rust) + 322 keeper + 165 frontend (141 unit + 24 E2E)
-**Program:** 27 instructions (21 core + 2 whitelist + 2 account close + 1 admin setter + 1 devnet-only)
+**Tests:** 847 total — 352 core monorepo (212 TS + 132 Rust + 8 integration) + 322 keeper + 169 frontend (145 unit + 24 E2E)
+**Programs:** 33 instructions total — 27 allocator + 3 adaptor + 3 mock vault
 **On-chain TVL:** ~260 USDC (moderate: 210, aggressive: 50) — needs redeploy after hardening
 **Submission:** Strategy docs at nanuqfi.com/strategy. Demo video pending (last blocker).
 

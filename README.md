@@ -42,7 +42,8 @@
 **27 on-chain instructions** -- deployed to Solana devnet
 
 ```
-Program ID: 2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P
+Allocator:       2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P
+Ranger Adaptor:  HsNnmuB18pA2U24K4Stc1yan67Cx96gmvGRqBUqRFWwY
 ```
 
 | Category | Instructions |
@@ -53,6 +54,16 @@ Program ID: 2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P
 | Admin | `emergency_halt`, `resume`, `update_keeper_authority`, `update_guardrails`, `update_deposit_cap`, `update_treasury_usdc`, `withdraw_treasury` |
 | Protocol Mgmt | `add_whitelisted_protocol`, `remove_whitelisted_protocol` |
 | Cleanup | `close_rebalance_record`, `admin_reset_vault` (devnet), `admin_set_tvl` (devnet), `admin_set_redemption_period`, `admin_set_rebalance_counter` (devnet), `admin_set_max_single_deposit` |
+
+### Ranger Earn Adaptor
+
+NanuqFi integrates as a **yield routing primitive** for [Ranger Finance](https://ranger.finance) vaults. The adaptor bridges Ranger's 3-instruction interface into our allocator -- Ranger vault managers add NanuqFi as a single strategy, and our AI keeper routes capital across Kamino, Marginfi, and Lulo behind the scenes.
+
+| Instruction | Purpose |
+|------------|---------|
+| `initialize` | Register NanuqFi as a strategy for a Ranger vault |
+| `deposit` | Route USDC from Ranger vault into allocator, return position value |
+| `withdraw` | Recall USDC from allocator back to Ranger vault |
 
 ### Security Hardening
 
