@@ -80,33 +80,37 @@ pub mod nanuqfi_adaptor {
   }
 
   /// Withdraw USDC from NanuqFi allocator back to Ranger vault.
+  /// If no pending withdrawal exists, calls request_withdraw first.
+  /// If a pending withdrawal already exists, skips request and goes straight to withdraw.
   /// Returns remaining position value via sol_set_return_data.
   pub fn withdraw(ctx: Context<AdaptorWithdraw>, amount: u64) -> Result<()> {
-    // Convert USDC amount to shares
-    let vault = &ctx.accounts.risk_vault;
-    let shares = if vault.total_assets > 0 && vault.total_shares > 0 {
-      ((amount as u128)
-        .checked_mul(vault.total_shares as u128)
-        .unwrap()
-        / (vault.total_assets as u128)) as u64
-    } else {
-      amount
-    };
-
-    // CPI: request_withdraw
     let cpi_program = ctx.accounts.allocator_program.to_account_info();
-    let request_accounts = nanuqfi_allocator::cpi::accounts::RequestWithdraw {
-      allocator: ctx.accounts.allocator.to_account_info(),
-      risk_vault: ctx.accounts.risk_vault.to_account_info(),
-      user_position: ctx.accounts.user_position.to_account_info(),
-      user: ctx.accounts.vault_strategy_auth.to_account_info(),
-    };
-    nanuqfi_allocator::cpi::request_withdraw(
-      CpiContext::new(cpi_program.clone(), request_accounts),
-      shares,
-    )?;
 
-    // CPI: withdraw (instant on devnet — redemption period = 0)
+    // Only request if no pending withdrawal (allows two-step flow with redemption period)
+    if ctx.accounts.user_position.pending_withdrawal_shares == 0 {
+      let vault = &ctx.accounts.risk_vault;
+      let shares = if vault.total_assets > 0 && vault.total_shares > 0 {
+        ((amount as u128)
+          .checked_mul(vault.total_shares as u128)
+          .unwrap()
+          / (vault.total_assets as u128)) as u64
+      } else {
+        amount
+      };
+
+      let request_accounts = nanuqfi_allocator::cpi::accounts::RequestWithdraw {
+        allocator: ctx.accounts.allocator.to_account_info(),
+        risk_vault: ctx.accounts.risk_vault.to_account_info(),
+        user_position: ctx.accounts.user_position.to_account_info(),
+        user: ctx.accounts.vault_strategy_auth.to_account_info(),
+      };
+      nanuqfi_allocator::cpi::request_withdraw(
+        CpiContext::new(cpi_program.clone(), request_accounts),
+        shares,
+      )?;
+    }
+
+    // CPI: withdraw (requires redemption period to have elapsed since request)
     let withdraw_accounts = nanuqfi_allocator::cpi::accounts::Withdraw {
       allocator: ctx.accounts.allocator.to_account_info(),
       risk_vault: ctx.accounts.risk_vault.to_account_info(),
