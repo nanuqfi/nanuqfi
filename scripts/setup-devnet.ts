@@ -248,10 +248,32 @@ async function main(): Promise<void> {
 
   // Step 2: Treasury
   console.log('\n2. Treasury')
-  const treasuryUsdc = await initTreasury()
+  let treasuryUsdc: PublicKey
+  try {
+    treasuryUsdc = await initTreasury()
+  } catch (err) {
+    console.log(`  [warn] Treasury fetch failed (${err instanceof Error ? err.message : err}), continuing...`)
+    // Treasury already exists, derive the expected USDC ATA
+    const { getAssociatedTokenAddress } = await import('@solana/spl-token')
+    treasuryUsdc = await getAssociatedTokenAddress(USDC_MINT, allocatorPDA, true)
+    console.log(`  [fallback] Treasury USDC ATA: ${treasuryUsdc}`)
+  }
 
-  // Step 3: Moderate Vault (risk_level=1)
-  console.log('\n3. Moderate Vault')
+  // Step 3: Conservative Vault (risk_level=0)
+  console.log('\n3. Conservative Vault')
+  await initRiskVault({
+    riskLevel: 0,
+    maxPerpBps: 0,                 // 0% — no perp exposure
+    maxLendingBps: 10000,          // 100% — lending only
+    maxSingleAssetBps: 7000,       // 70% — allow concentrated safe positions
+    maxDrawdownBps: 200,           // 2%
+    maxLeverageBps: 10000,         // 1x (no leverage)
+    redemptionPeriodSlots: 172800, // ~1 day at 2 slots/sec
+    depositCap: 100_000_000,       // 100 USDC (6 decimals)
+  })
+
+  // Step 4: Moderate Vault (risk_level=1)
+  console.log('\n4. Moderate Vault')
   await initRiskVault({
     riskLevel: 1,
     maxPerpBps: 6000,             // 60%
@@ -263,8 +285,8 @@ async function main(): Promise<void> {
     depositCap: 100_000_000,      // 100 USDC (6 decimals)
   })
 
-  // Step 4: Aggressive Vault (risk_level=2)
-  console.log('\n4. Aggressive Vault')
+  // Step 5: Aggressive Vault (risk_level=2)
+  console.log('\n5. Aggressive Vault')
   await initRiskVault({
     riskLevel: 2,
     maxPerpBps: 7000,             // 70%
@@ -277,16 +299,18 @@ async function main(): Promise<void> {
   })
 
   // Summary
+  const [conservativeVaultPDA] = getRiskVaultPDA(0)
   const [moderateVaultPDA] = getRiskVaultPDA(1)
   const [aggressiveVaultPDA] = getRiskVaultPDA(2)
 
   console.log('\n' + '='.repeat(52))
   console.log('Setup Complete')
   console.log('='.repeat(52))
-  console.log(`  Allocator PDA:      ${allocatorPDA}`)
-  console.log(`  Treasury PDA:       ${treasuryPDA}`)
-  console.log(`  Moderate Vault PDA: ${moderateVaultPDA}`)
-  console.log(`  Aggressive Vault:   ${aggressiveVaultPDA}`)
+  console.log(`  Allocator PDA:         ${allocatorPDA}`)
+  console.log(`  Treasury PDA:          ${treasuryPDA}`)
+  console.log(`  Conservative Vault:    ${conservativeVaultPDA}`)
+  console.log(`  Moderate Vault PDA:    ${moderateVaultPDA}`)
+  console.log(`  Aggressive Vault:      ${aggressiveVaultPDA}`)
   console.log('')
 }
 

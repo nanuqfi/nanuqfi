@@ -894,6 +894,126 @@ pub mod nanuqfi_allocator {
     Ok(())
   }
 
+  // ─── Account Migration (v0 → v1) ───────────────────────────────────
+
+  /// Migrate Allocator account from v0 layout (no version, no whitelist)
+  /// to v1 layout (with version + protocol_whitelist). Idempotent.
+  pub fn admin_migrate_allocator(ctx: Context<MigrateAllocator>) -> Result<()> {
+    let account_info = ctx.accounts.allocator.to_account_info();
+    let data = account_info.try_borrow_data()?;
+    let len = data.len();
+
+    // If already migrated (has whitelist vec), the account is ≥ 87 bytes
+    if len >= 87 {
+      msg!("Allocator already migrated ({} bytes), skipping", len);
+      return Ok(());
+    }
+
+    // Old layout (82 bytes): disc(8) + admin(32) + keeper(32) + tvl(8) + halted(1) + bump(1)
+    require!(len == 82, AllocatorError::MathOverflow); // Sanity check
+
+    let admin = Pubkey::try_from(&data[8..40]).unwrap();
+    let keeper = Pubkey::try_from(&data[40..72]).unwrap();
+    let tvl = u64::from_le_bytes(data[72..80].try_into().unwrap());
+    let halted = data[80] != 0;
+    let bump = data[81];
+
+    // Verify caller is admin
+    require!(ctx.accounts.admin.key() == admin, AllocatorError::UnauthorizedAdmin);
+
+    drop(data);
+
+    // New layout: disc(8) + version(1) + admin(32) + keeper(32) + tvl(8) + halted(1) + whitelist_len(4) + bump(1) = 87
+    let new_size = 8 + 1 + 32 + 32 + 8 + 1 + 4 + 1; // 87 bytes
+    account_info.realloc(new_size, false)?;
+
+    // Transfer extra rent if needed via System Program CPI
+    let rent = Rent::get()?;
+    let min_balance = rent.minimum_balance(new_size);
+    let current_balance = account_info.lamports();
+    if current_balance < min_balance {
+      let diff = min_balance - current_balance;
+      anchor_lang::system_program::transfer(
+        CpiContext::new(
+          ctx.accounts.system_program.to_account_info(),
+          anchor_lang::system_program::Transfer {
+            from: ctx.accounts.admin.to_account_info(),
+            to: account_info.clone(),
+          },
+        ),
+        diff,
+      )?;
+    }
+
+    let mut data = account_info.try_borrow_mut_data()?;
+    data[8] = CURRENT_VERSION;
+    data[9..41].copy_from_slice(&admin.to_bytes());
+    data[41..73].copy_from_slice(&keeper.to_bytes());
+    data[73..81].copy_from_slice(&tvl.to_le_bytes());
+    data[81] = if halted { 1 } else { 0 };
+    data[82..86].copy_from_slice(&0u32.to_le_bytes());
+    data[86] = bump;
+
+    msg!("Allocator migrated: v0 (82 bytes) → v1 ({} bytes)", new_size);
+    Ok(())
+  }
+
+  /// Migrate Treasury account from v0 layout (no version, no fees_withdrawn)
+  /// to v1 layout. Idempotent.
+  pub fn admin_migrate_treasury(ctx: Context<MigrateTreasury>) -> Result<()> {
+    let account_info = ctx.accounts.treasury.to_account_info();
+    let data = account_info.try_borrow_data()?;
+    let len = data.len();
+
+    // If already migrated, account is 90 bytes
+    if len >= 90 {
+      msg!("Treasury already migrated ({} bytes), skipping", len);
+      return Ok(());
+    }
+
+    // Old layout (81 bytes): disc(8) + allocator(32) + usdc_account(32) + fees_collected(8) + bump(1)
+    require!(len == 81, AllocatorError::MathOverflow);
+
+    let allocator_key = Pubkey::try_from(&data[8..40]).unwrap();
+    let usdc_account = Pubkey::try_from(&data[40..72]).unwrap();
+    let fees_collected = u64::from_le_bytes(data[72..80].try_into().unwrap());
+    let bump = data[80];
+
+    drop(data);
+
+    // New layout: disc(8) + version(1) + allocator(32) + usdc(32) + fees_collected(8) + fees_withdrawn(8) + bump(1) = 90
+    let new_size = 8 + 1 + 32 + 32 + 8 + 8 + 1; // 90 bytes
+    account_info.realloc(new_size, false)?;
+
+    let rent = Rent::get()?;
+    let min_balance = rent.minimum_balance(new_size);
+    let current_balance = account_info.lamports();
+    if current_balance < min_balance {
+      let diff = min_balance - current_balance;
+      anchor_lang::system_program::transfer(
+        CpiContext::new(
+          ctx.accounts.system_program.to_account_info(),
+          anchor_lang::system_program::Transfer {
+            from: ctx.accounts.admin.to_account_info(),
+            to: account_info.clone(),
+          },
+        ),
+        diff,
+      )?;
+    }
+
+    let mut data = account_info.try_borrow_mut_data()?;
+    data[8] = CURRENT_VERSION;
+    data[9..41].copy_from_slice(&allocator_key.to_bytes());
+    data[41..73].copy_from_slice(&usdc_account.to_bytes());
+    data[73..81].copy_from_slice(&fees_collected.to_le_bytes());
+    data[81..89].copy_from_slice(&0u64.to_le_bytes());
+    data[89] = bump;
+
+    msg!("Treasury migrated: v0 (81 bytes) → v1 ({} bytes)", new_size);
+    Ok(())
+  }
+
   // ─── Protocol Whitelist Management ──────────────────────────────────
 
   pub fn add_whitelisted_protocol(ctx: Context<AdminUpdateAllocator>, protocol: Pubkey) -> Result<()> {
@@ -1512,6 +1632,26 @@ pub struct AdminResetVault<'info> {
   pub risk_vault: Account<'info, RiskVault>,
   #[account(constraint = admin.key() == allocator.admin @ AllocatorError::UnauthorizedAdmin)]
   pub admin: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct MigrateAllocator<'info> {
+  /// CHECK: Migration reads raw bytes — cannot use Account<Allocator> (deserialization fails on v0)
+  #[account(mut, seeds = [b"allocator"], bump)]
+  pub allocator: UncheckedAccount<'info>,
+  #[account(mut)]
+  pub admin: Signer<'info>,
+  pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct MigrateTreasury<'info> {
+  /// CHECK: Migration reads raw bytes — cannot use Account<Treasury> (deserialization fails on v0)
+  #[account(mut, seeds = [b"treasury"], bump)]
+  pub treasury: UncheckedAccount<'info>,
+  #[account(mut)]
+  pub admin: Signer<'info>,
+  pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
