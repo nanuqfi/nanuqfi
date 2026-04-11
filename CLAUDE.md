@@ -18,8 +18,7 @@ NanuqFi is a protocol-agnostic, AI-powered yield routing layer for DeFi. Users d
 |------|---------|------------|------|
 | `nanuqfi/nanuqfi` | **Core monorepo** — SDK packages + Anchor program | TypeScript, Rust/Anchor, pnpm + Turborepo | `~/local-dev/nanuqfi/` |
 | `nanuqfi/nanuqfi-keeper` | **AI Keeper** — strategy bot with algorithm engine + Claude AI | TypeScript, Anthropic SDK | `~/local-dev/nanuqfi-keeper/` |
-| `nanuqfi/nanuqfi-app` | **Frontend** — marketing + dashboard + strategy docs (consolidated) | Next.js 16, Tailwind 4, React 19 | `~/local-dev/nanuqfi-app/` |
-| ~~`nanuqfi/nanuqfi-web`~~ | **ARCHIVED** — marketing consolidated into nanuqfi-app | — | — |
+| `nanuqfi/nanuqfi-app` | **Frontend** — marketing + dashboard + strategy docs (consolidated) | Next.js 16, Tailwind 4, React 19, Playwright E2E | `~/local-dev/nanuqfi-app/` |
 
 **Organization Mission:** Build the yield routing layer for DeFi — transparent, trustless, AI-enhanced.
 
@@ -113,7 +112,7 @@ scripts/
 
 **Key Commands:**
 ```bash
-pnpm test                       # run all tests (206 tests)
+pnpm test                       # run all 322 tests
 pnpm build                      # compile TypeScript
 pnpm dev                        # run with tsx (dev mode)
 docker build -t nanuqfi-keeper . # build Docker image
@@ -132,13 +131,14 @@ docker build -t nanuqfi-keeper . # build Docker image
 ```bash
 pnpm dev                        # local dev server
 pnpm build                      # production build
-pnpm test                       # 26 tests (UI components + error mapping)
+pnpm test                       # 141 unit tests (Vitest + jsdom)
+pnpm test:e2e                   # 24 Playwright E2E tests
 pnpm lint                       # ESLint
 ```
 
 **Routes:** `/` (marketing), `/strategy` (hackathon docs), `/app` (dashboard), `/app/vaults` (explorer), `/app/vaults/[riskLevel]` (detail + deposit), `/app/activity` (AI decisions)
-**Components:** 27 total — 8 UI primitives, 12 app components, 7 marketing sections
-**Note:** nanuqfi-web was archived 2026-04-08, marketing consolidated here
+**Components:** 30 total — 8 UI primitives, 15 app components, 7 marketing sections
+**Additional Features:** `/api/airdrop` (test USDC faucet for devnet), `/api/rpc` (server-side RPC proxy), `OnboardingGuide` (4-step judge onboarding), `DevnetBanner` (onboarding trigger)
 
 ---
 
@@ -149,7 +149,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 **Hackathon:** Ranger Build-A-Bear — deadline April 17, 2026
 **Domain:** nanuqfi.com (marketing + app, consolidated) + app.nanuqfi.com (alias) + keeper.nanuqfi.com (API)
 **Phase:** All phases complete. UI revamped (Pendle + Ethena), transactions wired, strategy docs live.
-**Tests:** 575 total (57 core + 44 backend-marginfi + 36 backend-kamino + 48 backend-lulo + 24 backtest + 98 Rust allocator + 206 keeper + 62 frontend)
+**Tests:** 824 total — 337 core monorepo (212 TS + 125 Rust) + 322 keeper + 165 frontend (141 unit + 24 E2E)
 **Program:** 27 instructions (21 core + 2 whitelist + 2 account close + 1 admin setter + 1 devnet-only)
 **On-chain TVL:** ~260 USDC (moderate: 210, aggressive: 50) — needs redeploy after hardening
 **Submission:** Strategy docs at nanuqfi.com/strategy. Demo video pending (last blocker).
