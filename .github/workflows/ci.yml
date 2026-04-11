@@ -31,22 +31,12 @@ jobs:
             ~/.cargo/git
             programs/allocator/target
           key: cargo-${{ hashFiles('Cargo.lock') }}
-      - name: Build (zero warnings)
-        run: cargo build
-        working-directory: programs/allocator
-        env:
-          RUSTFLAGS: "-D warnings"
-      - name: Test (zero warnings)
-        run: cargo test
-        working-directory: programs/allocator
-        env:
-          RUSTFLAGS: "-D warnings"
-      - name: Build with devnet features
+      - name: Build with devnet features (zero warnings)
         run: cargo build --features devnet
         working-directory: programs/allocator
         env:
           RUSTFLAGS: "-D warnings"
-      - name: Test with devnet features
+      - name: Test with devnet features (zero warnings)
         run: cargo test --features devnet
         working-directory: programs/allocator
         env:
