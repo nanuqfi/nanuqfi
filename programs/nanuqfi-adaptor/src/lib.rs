@@ -263,7 +263,8 @@ pub struct AdaptorWithdraw<'info> {
   #[account(mut)]
   pub user_position: Account<'info, UserPosition>,
 
-  #[account(mut, seeds = [b"treasury"], bump = treasury.bump)]
+  /// Treasury PDA — validated by allocator during CPI (seeds are allocator program's, not ours)
+  #[account(mut)]
   pub treasury: Account<'info, Treasury>,
 
   #[account(mut)]

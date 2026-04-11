@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 use nanuqfi_adaptor::program::NanuqfiAdaptor;
 
-declare_id!("YtMHVbkYk2X6SFDQ4gcFDvV9TbsxdVTQqnzoXqmp56n");
+declare_id!("FCW6LsSvGAv3UdLixCkm4vygifxR1sVBonuserqFe9Fm");
 
 #[program]
 pub mod mock_ranger_vault {
@@ -196,8 +196,8 @@ pub struct MockDepositStrategy<'info> {
   #[account(seeds = [b"mock_vault_auth"], bump)]
   pub vault_auth: UncheckedAccount<'info>,
 
-  /// CHECK: PDA authority for this strategy
-  #[account(seeds = [b"vault_strategy_auth", strategy.key().as_ref()], bump)]
+  /// CHECK: PDA authority for this strategy — must be mut (adaptor + allocator need writable)
+  #[account(mut, seeds = [b"vault_strategy_auth", strategy.key().as_ref()], bump)]
   pub vault_strategy_auth: UncheckedAccount<'info>,
 
   /// Vault's idle USDC pool
@@ -245,8 +245,8 @@ pub struct MockWithdrawStrategy<'info> {
   #[account(mut)]
   pub manager: Signer<'info>,
 
-  /// CHECK: PDA authority for this strategy
-  #[account(seeds = [b"vault_strategy_auth", strategy.key().as_ref()], bump)]
+  /// CHECK: PDA authority for this strategy — must be mut (adaptor + allocator need writable)
+  #[account(mut, seeds = [b"vault_strategy_auth", strategy.key().as_ref()], bump)]
   pub vault_strategy_auth: UncheckedAccount<'info>,
 
   #[account(mut)]

@@ -41,7 +41,7 @@ import allocatorIdl from '../target/idl/nanuqfi_allocator.json' assert { type: '
 
 const ALLOCATOR_PROGRAM_ID = new PublicKey('2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P')
 const ADAPTOR_PROGRAM_ID = new PublicKey('HsNnmuB18pA2U24K4Stc1yan67Cx96gmvGRqBUqRFWwY')
-const MOCK_VAULT_PROGRAM_ID = new PublicKey('YtMHVbkYk2X6SFDQ4gcFDvV9TbsxdVTQqnzoXqmp56n')
+const MOCK_VAULT_PROGRAM_ID = new PublicKey('FCW6LsSvGAv3UdLixCkm4vygifxR1sVBonuserqFe9Fm')
 
 // NanuqFi test USDC mint (we're mint authority)
 const USDC_MINT = new PublicKey('BiTXT15XyfSakk5Yz8L8QrzHPWbK8NjoZeEMFrDvKdKh')
