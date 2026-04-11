@@ -1014,6 +1014,117 @@ pub mod nanuqfi_allocator {
     Ok(())
   }
 
+  /// Migrate RiskVault account from v0 layout (no version, no max_single_deposit)
+  /// to v1 layout. Idempotent. v0 = 212 bytes, v1 = 221 bytes.
+  pub fn admin_migrate_risk_vault(ctx: Context<MigrateRiskVault>) -> Result<()> {
+    let account_info = ctx.accounts.risk_vault.to_account_info();
+    let data = account_info.try_borrow_data()?;
+    let len = data.len();
+
+    if len >= 221 {
+      msg!("RiskVault already migrated ({} bytes), skipping", len);
+      return Ok(());
+    }
+
+    // v0 layout (212 bytes):
+    // disc(8) + allocator(32) + risk_level(1) + protocol_vault(32) + share_mint(32) +
+    // total_shares(8) + total_assets(8) + peak_equity(8) + current_equity(8) +
+    // equity_24h_ago(8) + last_rebalance_slot(8) + rebalance_counter(4) +
+    // last_mgmt_fee_slot(8) + weights_vec(20) + max_perp(2) + max_lending(2) +
+    // max_single_asset(2) + max_drawdown(2) + max_leverage(2) +
+    // redemption_period(8) + deposit_cap(8) + bump(1)
+    // = 212 bytes (no version byte, no max_single_deposit)
+    require!(len == 212, AllocatorError::MathOverflow);
+
+    // Verify caller is admin via allocator PDA
+    let allocator_key = Pubkey::try_from(&data[8..40]).unwrap();
+    let allocator_info = ctx.accounts.allocator.to_account_info();
+    let alloc_data = allocator_info.try_borrow_data()?;
+    // Allocator v1: disc(8) + version(1) + admin(32)
+    let admin_key = Pubkey::try_from(&alloc_data[9..41]).unwrap();
+    require!(ctx.accounts.admin.key() == admin_key, AllocatorError::UnauthorizedAdmin);
+    drop(alloc_data);
+
+    // Read all v0 fields (offsets relative to data start)
+    let disc = data[0..8].to_vec();
+    let allocator = data[8..40].to_vec();             // 32
+    let risk_level = data[40];                        // 1
+    let protocol_vault = data[41..73].to_vec();       // 32
+    let share_mint = data[73..105].to_vec();          // 32
+    let total_shares = data[105..113].to_vec();       // 8
+    let total_assets = data[113..121].to_vec();       // 8
+    let peak_equity = data[121..129].to_vec();        // 8
+    let current_equity = data[129..137].to_vec();     // 8
+    let equity_24h_ago = data[137..145].to_vec();     // 8
+    let last_rebalance_slot = data[145..153].to_vec();// 8
+    let rebalance_counter = data[153..157].to_vec();  // 4
+    let last_mgmt_fee_slot = data[157..165].to_vec(); // 8
+    let weights_vec = data[165..185].to_vec();        // 20 (4 len + 8*2 slots)
+    let max_perp = data[185..187].to_vec();           // 2
+    let max_lending = data[187..189].to_vec();        // 2
+    let max_single_asset = data[189..191].to_vec();   // 2
+    let max_drawdown = data[191..193].to_vec();       // 2
+    let max_leverage = data[193..195].to_vec();       // 2
+    let redemption_period = data[195..203].to_vec();  // 8
+    let deposit_cap = data[203..211].to_vec();        // 8
+    let bump = data[211];                             // 1
+
+    drop(data);
+
+    // v1 layout (221 bytes): insert version(1) after disc, add max_single_deposit(8) before bump
+    let new_size = 221usize;
+    account_info.realloc(new_size, false)?;
+
+    let rent = Rent::get()?;
+    let min_balance = rent.minimum_balance(new_size);
+    let current_balance = account_info.lamports();
+    if current_balance < min_balance {
+      let diff = min_balance - current_balance;
+      anchor_lang::system_program::transfer(
+        CpiContext::new(
+          ctx.accounts.system_program.to_account_info(),
+          anchor_lang::system_program::Transfer {
+            from: ctx.accounts.admin.to_account_info(),
+            to: account_info.clone(),
+          },
+        ),
+        diff,
+      )?;
+    }
+
+    let mut d = account_info.try_borrow_mut_data()?;
+    let mut off = 0usize;
+
+    d[off..off+8].copy_from_slice(&disc); off += 8;
+    d[off] = CURRENT_VERSION; off += 1;              // NEW: version byte
+    d[off..off+32].copy_from_slice(&allocator); off += 32;
+    d[off] = risk_level; off += 1;
+    d[off..off+32].copy_from_slice(&protocol_vault); off += 32;
+    d[off..off+32].copy_from_slice(&share_mint); off += 32;
+    d[off..off+8].copy_from_slice(&total_shares); off += 8;
+    d[off..off+8].copy_from_slice(&total_assets); off += 8;
+    d[off..off+8].copy_from_slice(&peak_equity); off += 8;
+    d[off..off+8].copy_from_slice(&current_equity); off += 8;
+    d[off..off+8].copy_from_slice(&equity_24h_ago); off += 8;
+    d[off..off+8].copy_from_slice(&last_rebalance_slot); off += 8;
+    d[off..off+4].copy_from_slice(&rebalance_counter); off += 4;
+    d[off..off+8].copy_from_slice(&last_mgmt_fee_slot); off += 8;
+    d[off..off+20].copy_from_slice(&weights_vec); off += 20;
+    d[off..off+2].copy_from_slice(&max_perp); off += 2;
+    d[off..off+2].copy_from_slice(&max_lending); off += 2;
+    d[off..off+2].copy_from_slice(&max_single_asset); off += 2;
+    d[off..off+2].copy_from_slice(&max_drawdown); off += 2;
+    d[off..off+2].copy_from_slice(&max_leverage); off += 2;
+    d[off..off+8].copy_from_slice(&redemption_period); off += 8;
+    d[off..off+8].copy_from_slice(&deposit_cap); off += 8;
+    d[off..off+8].copy_from_slice(&0u64.to_le_bytes()); off += 8; // NEW: max_single_deposit = 0 (unlimited)
+    d[off] = bump;
+
+    msg!("RiskVault migrated: v0 (212 bytes) → v1 ({} bytes)", new_size);
+    require!(allocator_key == ctx.accounts.allocator.key(), AllocatorError::UnauthorizedAdmin);
+    Ok(())
+  }
+
   // ─── Protocol Whitelist Management ──────────────────────────────────
 
   pub fn add_whitelisted_protocol(ctx: Context<AdminUpdateAllocator>, protocol: Pubkey) -> Result<()> {
@@ -1649,6 +1760,19 @@ pub struct MigrateTreasury<'info> {
   /// CHECK: Migration reads raw bytes — cannot use Account<Treasury> (deserialization fails on v0)
   #[account(mut, seeds = [b"treasury"], bump)]
   pub treasury: UncheckedAccount<'info>,
+  #[account(mut)]
+  pub admin: Signer<'info>,
+  pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct MigrateRiskVault<'info> {
+  /// CHECK: Migration reads raw bytes — cannot use Account<RiskVault> (deserialization fails on v0)
+  #[account(mut)]
+  pub risk_vault: UncheckedAccount<'info>,
+  /// CHECK: Allocator PDA — read raw for admin verification
+  #[account(seeds = [b"allocator"], bump)]
+  pub allocator: UncheckedAccount<'info>,
   #[account(mut)]
   pub admin: Signer<'info>,
   pub system_program: Program<'info, System>,
