@@ -6,9 +6,11 @@ skip-lint = false
 
 [programs.localnet]
 nanuqfi_allocator = "2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P"
+nanuqfi_adaptor = "HsNnmuB18pA2U24K4Stc1yan67Cx96gmvGRqBUqRFWwY"
 
 [programs.devnet]
 nanuqfi_allocator = "2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P"
+nanuqfi_adaptor = "HsNnmuB18pA2U24K4Stc1yan67Cx96gmvGRqBUqRFWwY"
 
 [registry]
 url = "https://api.apr.dev"
