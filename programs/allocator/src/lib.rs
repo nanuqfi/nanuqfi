@@ -836,27 +836,35 @@ pub mod nanuqfi_allocator {
   /// Admin-only: reset vault accounting to clean state (devnet testing utility).
   /// Zeroes shares, assets, peak equity, timing. Preserves rebalance_counter
   /// (on-chain RebalanceRecord PDAs are keyed by counter, so resetting would collide).
-  #[cfg(feature = "devnet")]
   pub fn admin_reset_vault(ctx: Context<AdminResetVault>) -> Result<()> {
-    let vault = &mut ctx.accounts.risk_vault;
-    let clock = Clock::get()?;
-    vault.total_shares = 0;
-    vault.total_assets = 0;
-    vault.peak_equity = 0;
-    vault.current_equity = 0;
-    vault.equity_24h_ago = 0;
-    vault.last_rebalance_slot = 0;
-    // NOTE: rebalance_counter is NOT reset — existing RebalanceRecord PDAs would collide
-    vault.last_mgmt_fee_slot = clock.slot;
-    vault.current_weights = vec![];
-    Ok(())
+    #[cfg(not(feature = "devnet"))]
+    { let _ = ctx; return err!(AllocatorError::UnauthorizedAdmin); }
+    #[cfg(feature = "devnet")]
+    {
+      let vault = &mut ctx.accounts.risk_vault;
+      let clock = Clock::get()?;
+      vault.total_shares = 0;
+      vault.total_assets = 0;
+      vault.peak_equity = 0;
+      vault.current_equity = 0;
+      vault.equity_24h_ago = 0;
+      vault.last_rebalance_slot = 0;
+      // NOTE: rebalance_counter is NOT reset — existing RebalanceRecord PDAs would collide
+      vault.last_mgmt_fee_slot = clock.slot;
+      vault.current_weights = vec![];
+      Ok(())
+    }
   }
 
   /// Admin-only: set allocator total_tvl to match actual vault totals.
-  #[cfg(feature = "devnet")]
   pub fn admin_set_tvl(ctx: Context<AdminSetTvl>, tvl: u64) -> Result<()> {
-    ctx.accounts.allocator.total_tvl = tvl;
-    Ok(())
+    #[cfg(not(feature = "devnet"))]
+    { let _ = (ctx, tvl); return err!(AllocatorError::UnauthorizedAdmin); }
+    #[cfg(feature = "devnet")]
+    {
+      ctx.accounts.allocator.total_tvl = tvl;
+      Ok(())
+    }
   }
 
   /// Admin-only: override redemption period with minimum safety bound.
@@ -869,10 +877,14 @@ pub mod nanuqfi_allocator {
   }
 
   /// Admin-only: set rebalance counter to skip past existing RebalanceRecord PDAs.
-  #[cfg(feature = "devnet")]
   pub fn admin_set_rebalance_counter(ctx: Context<AdminResetVault>, counter: u32) -> Result<()> {
-    ctx.accounts.risk_vault.rebalance_counter = counter;
-    Ok(())
+    #[cfg(not(feature = "devnet"))]
+    { let _ = (ctx, counter); return err!(AllocatorError::UnauthorizedAdmin); }
+    #[cfg(feature = "devnet")]
+    {
+      ctx.accounts.risk_vault.rebalance_counter = counter;
+      Ok(())
+    }
   }
 
   /// Admin-only: set per-transaction deposit limit (0 = uncapped).
