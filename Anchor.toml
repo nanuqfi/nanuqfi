@@ -7,10 +7,12 @@ skip-lint = false
 [programs.localnet]
 nanuqfi_allocator = "2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P"
 nanuqfi_adaptor = "HsNnmuB18pA2U24K4Stc1yan67Cx96gmvGRqBUqRFWwY"
+mock_ranger_vault = "9RPiyNFfpo58qA4x7R2QgkA94hRW6cN48CBHxjVDewdZ"
 
 [programs.devnet]
 nanuqfi_allocator = "2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P"
 nanuqfi_adaptor = "HsNnmuB18pA2U24K4Stc1yan67Cx96gmvGRqBUqRFWwY"
+mock_ranger_vault = "9RPiyNFfpo58qA4x7R2QgkA94hRW6cN48CBHxjVDewdZ"
 
 [registry]
 url = "https://api.apr.dev"
