@@ -1125,6 +1125,77 @@ pub mod nanuqfi_allocator {
     Ok(())
   }
 
+  /// Migrate UserPosition account from v0 layout (129 bytes, no version)
+  /// to v1 layout (130 bytes, with version). Idempotent.
+  pub fn admin_migrate_user_position(ctx: Context<MigrateUserPosition>) -> Result<()> {
+    let account_info = ctx.accounts.user_position.to_account_info();
+    let data = account_info.try_borrow_data()?;
+    let len = data.len();
+
+    if len >= 130 {
+      msg!("UserPosition already migrated ({} bytes), skipping", len);
+      return Ok(());
+    }
+
+    // v0 layout (129 bytes):
+    // disc(8) + user(32) + risk_vault(32) + shares(8) + deposited_usdc(8) + entry_slot(8) +
+    // high_water_mark_price(8) + pending_withdrawal_shares(8) + withdraw_request_slot(8) +
+    // request_time_share_price(8) + bump(1)
+    require!(len == 129, AllocatorError::MathOverflow);
+
+    let disc = data[0..8].to_vec();
+    let user = data[8..40].to_vec();
+    let risk_vault = data[40..72].to_vec();
+    let shares = data[72..80].to_vec();
+    let deposited_usdc = data[80..88].to_vec();
+    let entry_slot = data[88..96].to_vec();
+    let hwm_price = data[96..104].to_vec();
+    let pending_shares = data[104..112].to_vec();
+    let withdraw_slot = data[112..120].to_vec();
+    let request_price = data[120..128].to_vec();
+    let bump = data[128];
+
+    drop(data);
+
+    let new_size = 130usize;
+    account_info.realloc(new_size, false)?;
+
+    let rent = Rent::get()?;
+    let min_balance = rent.minimum_balance(new_size);
+    let current_balance = account_info.lamports();
+    if current_balance < min_balance {
+      let diff = min_balance - current_balance;
+      anchor_lang::system_program::transfer(
+        CpiContext::new(
+          ctx.accounts.system_program.to_account_info(),
+          anchor_lang::system_program::Transfer {
+            from: ctx.accounts.admin.to_account_info(),
+            to: account_info.clone(),
+          },
+        ),
+        diff,
+      )?;
+    }
+
+    let mut d = account_info.try_borrow_mut_data()?;
+    let mut off = 0usize;
+    d[off..off+8].copy_from_slice(&disc); off += 8;
+    d[off] = CURRENT_VERSION; off += 1;
+    d[off..off+32].copy_from_slice(&user); off += 32;
+    d[off..off+32].copy_from_slice(&risk_vault); off += 32;
+    d[off..off+8].copy_from_slice(&shares); off += 8;
+    d[off..off+8].copy_from_slice(&deposited_usdc); off += 8;
+    d[off..off+8].copy_from_slice(&entry_slot); off += 8;
+    d[off..off+8].copy_from_slice(&hwm_price); off += 8;
+    d[off..off+8].copy_from_slice(&pending_shares); off += 8;
+    d[off..off+8].copy_from_slice(&withdraw_slot); off += 8;
+    d[off..off+8].copy_from_slice(&request_price); off += 8;
+    d[off] = bump;
+
+    msg!("UserPosition migrated: v0 (129 bytes) → v1 ({} bytes)", new_size);
+    Ok(())
+  }
+
   // ─── Protocol Whitelist Management ──────────────────────────────────
 
   pub fn add_whitelisted_protocol(ctx: Context<AdminUpdateAllocator>, protocol: Pubkey) -> Result<()> {
@@ -1771,6 +1842,19 @@ pub struct MigrateRiskVault<'info> {
   #[account(mut)]
   pub risk_vault: UncheckedAccount<'info>,
   /// CHECK: Allocator PDA — read raw for admin verification
+  #[account(seeds = [b"allocator"], bump)]
+  pub allocator: UncheckedAccount<'info>,
+  #[account(mut)]
+  pub admin: Signer<'info>,
+  pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct MigrateUserPosition<'info> {
+  /// CHECK: Migration reads raw bytes — cannot use Account<UserPosition> (deserialization fails on v0)
+  #[account(mut)]
+  pub user_position: UncheckedAccount<'info>,
+  /// CHECK: Allocator PDA — used to verify admin
   #[account(seeds = [b"allocator"], bump)]
   pub allocator: UncheckedAccount<'info>,
   #[account(mut)]
