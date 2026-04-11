@@ -2,11 +2,40 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 use nanuqfi_adaptor::program::NanuqfiAdaptor;
 
-declare_id!("9RPiyNFfpo58qA4x7R2QgkA94hRW6cN48CBHxjVDewdZ");
+declare_id!("YtMHVbkYk2X6SFDQ4gcFDvV9TbsxdVTQqnzoXqmp56n");
 
 #[program]
 pub mod mock_ranger_vault {
   use super::*;
+
+  /// Simulate Ranger's vault adding NanuqFi as a strategy.
+  /// CPI into adaptor's initialize with vault_strategy_auth as PDA signer.
+  pub fn initialize_strategy(ctx: Context<MockInitializeStrategy>) -> Result<()> {
+    let strategy_key = ctx.accounts.strategy.key();
+    let auth_seeds: &[&[u8]] = &[
+      b"vault_strategy_auth",
+      strategy_key.as_ref(),
+      &[ctx.bumps.vault_strategy_auth],
+    ];
+
+    let cpi_program = ctx.accounts.adaptor_program.to_account_info();
+    let cpi_accounts = nanuqfi_adaptor::cpi::accounts::Initialize {
+      payer: ctx.accounts.manager.to_account_info(),
+      vault_strategy_auth: ctx.accounts.vault_strategy_auth.to_account_info(),
+      strategy: ctx.accounts.strategy.to_account_info(),
+      allocator: ctx.accounts.allocator.to_account_info(),
+      risk_vault: ctx.accounts.risk_vault.to_account_info(),
+      system_program: ctx.accounts.system_program.to_account_info(),
+    };
+    nanuqfi_adaptor::cpi::initialize(CpiContext::new_with_signer(
+      cpi_program,
+      cpi_accounts,
+      &[auth_seeds],
+    ))?;
+
+    msg!("Mock vault: strategy initialized");
+    Ok(())
+  }
 
   /// Simulate Ranger's deposit_strategy: transfer USDC to strategy ATA, then CPI adaptor deposit.
   pub fn deposit_strategy(ctx: Context<MockDepositStrategy>, amount: u64) -> Result<()> {
@@ -135,6 +164,28 @@ pub mod mock_ranger_vault {
 }
 
 // ─── Account Contexts ───────────────────────────────────────────────────────
+
+#[derive(Accounts)]
+pub struct MockInitializeStrategy<'info> {
+  #[account(mut)]
+  pub manager: Signer<'info>,
+
+  /// CHECK: Strategy PDA — to be created by the adaptor via init
+  #[account(mut)]
+  pub strategy: UncheckedAccount<'info>,
+
+  /// CHECK: PDA authority for this strategy
+  #[account(seeds = [b"vault_strategy_auth", strategy.key().as_ref()], bump)]
+  pub vault_strategy_auth: UncheckedAccount<'info>,
+
+  /// CHECK: NanuqFi allocator
+  pub allocator: UncheckedAccount<'info>,
+  /// CHECK: NanuqFi risk vault
+  pub risk_vault: UncheckedAccount<'info>,
+
+  pub adaptor_program: Program<'info, NanuqfiAdaptor>,
+  pub system_program: Program<'info, System>,
+}
 
 #[derive(Accounts)]
 pub struct MockDepositStrategy<'info> {
