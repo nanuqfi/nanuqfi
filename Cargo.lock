@@ -1333,6 +1333,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "mock-ranger-vault"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "nanuqfi-adaptor",
+]
+
+[[package]]
+name = "nanuqfi-adaptor"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "nanuqfi-allocator",
+]
+
+[[package]]
 name = "nanuqfi-allocator"
 version = "0.1.0"
 dependencies = [
