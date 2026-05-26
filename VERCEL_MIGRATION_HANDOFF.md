@@ -4,7 +4,7 @@
 >
 > **Origin session**: `[vercel_migration_1]` on 2026-05-26 (audit + plan).
 > **Execution session**: `[nanuqfi_vercel_1]` on 2026-05-26.
-> **Status**: ✅ CUTOVER COMPLETE — VPS decommission pending 7-day buffer.
+> **Status**: ✅ FULLY DONE — VPS decommissioned same-day. Only keeper.nanuqfi.com remains on VPS.
 
 ## Scope
 
@@ -243,20 +243,52 @@ Backup of pre-cutover DNS state: `/tmp/nanuqfi-cf-backup-1779813289.json`
 - `keeper.nanuqfi.com` — still served via CF→VPS (server: cloudflare)
 
 ### Known issues / follow-ups (non-blocking)
-1. **Preview env vars not set**: Vercel CLI v54.4.1 has a bug — its own documented `--value --yes` syntax for "all preview branches" still returns `git_branch_required`. **Action**: add the 5 env vars to Preview env via dashboard: https://vercel.com/rectors-projects/nanuqfi-app/settings/environment-variables
-2. **Airdrop rate-limit regression**: in-memory `Map` rate-limit doesn't persist across Vercel serverless instances. Two airdrops 10s apart to same wallet both succeeded on prod. Devnet only, low risk for hackathon demo. **Action (optional)**: migrate to Vercel KV / Upstash Redis if user-facing abuse becomes a concern.
-3. **Uncommitted changes in nanuqfi-app**: 3 modified files + `public/cdn/` not yet committed/pushed. **Action**: review diff + commit + push (auto-deploys via the Vercel GitHub App once committed).
-4. **Vercel Production Branch**: defaulted to `main`. PRs to other branches will deploy as preview — no env vars set yet (see #1).
+1. ~~Preview env vars not set~~ — ✅ DONE 2026-05-26 via Vercel REST API PATCH (token from `~/Library/Application Support/com.vercel.cli/auth.json`). All 5 vars now target=['production','preview'], encrypted values preserved.
+2. **Airdrop rate-limit regression** (skipped by decision): in-memory `Map` rate-limit doesn't persist across Vercel serverless instances. Devnet only, hackathon already submitted — left as-is.
+3. ~~Uncommitted changes in nanuqfi-app~~ — ✅ DONE 2026-05-26: 3 logical commits pushed (85c0484 keypair, 96c5bad redirects, 162cdd5 CDN). GitHub App wired, auto-deploy fires on push.
+4. **Vercel Production Branch**: `main`. PR previews will get env vars now (see #1 done). No action needed.
 5. **`output: 'standalone'` in `next.config.ts`**: leftover from Docker — Vercel ignores it. Safe to remove later, not urgent.
 
-### Pending — 7-day buffer (decommission target ~2026-06-02)
-- `ssh nanuqfi` → `docker compose down` (nanuqfi-app service only, keeper stays)
-- `docker image prune -f`
-- Keep `/home/nanuqfi/cdn` for 30 days as backup
-- `ssh reclabs3` → remove both nginx sites for nanuqfi (web + app), reload nginx
-- TLS: reissue `keeper.nanuqfi.com` standalone cert (currently shares cert with app.nanuqfi.com), THEN `certbot delete --cert-name app.nanuqfi.com` and `certbot delete --cert-name nanuqfi.com`
-- Update `~/.ssh/vps-port-registry.md`: remove 9001 (nanuqfi-app), keep 9000 (nanuqfi-keeper)
+### VPS decommission — ✅ DONE 2026-05-26 (same-day, no 7-day buffer)
 
-### Rollback (if needed within buffer)
-1. Restore CF DNS from `/tmp/nanuqfi-cf-backup-1779813289.json` — change all 3 back to A → 151.245.137.75, orange-cloud
-2. VPS container still running, traffic auto-restores within a few minutes
+Done in 3 phases with verification gates:
+
+**Phase 1** (reversible): stopped `nanuqfi-app` container, disabled nginx sites
+- `ssh nanuqfi 'cd app && docker compose stop'` → container stopped
+- `cp /etc/nginx/sites-enabled/nanuqfi-web /etc/nginx/sites-available/nanuqfi-web.disabled` (backup)
+- `rm /etc/nginx/sites-enabled/nanuqfi-{web,app}` → only `nanuqfi-keeper` left in sites-enabled
+- `nginx -t && systemctl reload nginx` → no traffic served from VPS for nanuqfi.com / www / app
+- Verified: Vercel still serves all 3, keeper still alive
+
+**Phase 2** (reversible): reissued keeper cert standalone
+- `certbot --nginx -d keeper.nanuqfi.com --cert-name keeper.nanuqfi.com -n --keep-until-expiring`
+- New cert at `/etc/letsencrypt/live/keeper.nanuqfi.com/` (expires 2026-08-24)
+- nginx config for `nanuqfi-keeper` auto-updated to point to new cert
+- Verified via openssl s_client against VPS IP (bypass CF proxy): subject CN=keeper.nanuqfi.com, SAN keeper.nanuqfi.com only
+
+**Phase 3** (irreversible): deleted old certs, removed container, updated port registry
+- `certbot delete --cert-name app.nanuqfi.com -n` → removed (was app + keeper shared)
+- `certbot delete --cert-name nanuqfi.com -n` → removed (was apex + www)
+- `docker compose rm -f` on VPS → container removed (image `ghcr.io/nanuqfi/nanuqfi-app:main` left, 464MB, can `docker rmi` later)
+- Updated `~/Documents/secret/ssh/vps-port-registry.md` (the real file behind the symlink) — retired 9001 entry, fixed `.xyz` typo on 9000
+
+### What remains on the VPS (intentional)
+- `nanuqfi-keeper` container (port 9000, untouched)
+- `/etc/nginx/sites-available/nanuqfi-app` config file (just unlinked from sites-enabled — not deleted)
+- `/etc/nginx/sites-available/nanuqfi-web.disabled` backup
+- `/home/nanuqfi/cdn/` (30-day retention per original handoff intent)
+- Docker image `ghcr.io/nanuqfi/nanuqfi-app:main` (464MB, can `docker rmi` anytime — it pulls fresh from ghcr.io if ever needed again)
+
+### Cleanup file: `/tmp/nanuqfi-cf-backup-1779813289.json`
+DNS rollback file no longer load-bearing now that decommission is complete. Safe to `rm`. macOS may auto-purge on reboot.
+
+### True rollback path (if Vercel ever fails)
+DNS backup at `/tmp/nanuqfi-cf-backup-...json` still works for DNS records, but VPS container is gone. Restoring nanuqfi-app on VPS would require:
+1. `cd /home/nanuqfi/app && docker compose up -d`
+2. `ln -s /etc/nginx/sites-available/nanuqfi-app /etc/nginx/sites-enabled/`
+3. `cp /etc/nginx/sites-available/nanuqfi-web.disabled /etc/nginx/sites-enabled/nanuqfi-web`
+4. New cert for `nanuqfi.com www.nanuqfi.com app.nanuqfi.com` (the deleted ones are gone forever, need fresh issuance)
+5. `nginx -t && systemctl reload nginx`
+6. Restore DNS from backup file
+
+~10 min total. Realistic emergency rollback if needed.
