@@ -11,3 +11,6 @@ test-ledger/
 .claude/
 .worktrees/
 docs/api/
+
+# macOS
+.DS_Store
