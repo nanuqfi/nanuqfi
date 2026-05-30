@@ -153,13 +153,13 @@ pnpm lint                       # ESLint
 
 See [ROADMAP.md](ROADMAP.md) for detailed tracking.
 
-**Hackathon:** Ranger Build-A-Bear — deadline April 17, 2026
-**Domain:** nanuqfi.com (marketing + app, consolidated) + app.nanuqfi.com (alias) + keeper.nanuqfi.com (API)
-**Phase:** All phases complete. UI revamped (Pendle + Ethena), transactions wired, strategy docs live.
+**Hackathon:** Ranger Build-A-Bear — submitted 2026-04-12
+**Domain:** nanuqfi.com (apex, marketing + app, Vercel) + www.nanuqfi.com (308 → apex) + app.nanuqfi.com (308 → nanuqfi.com/app, path preserved) + keeper.nanuqfi.com (API, VPS)
+**Phase:** All phases complete. UI revamped (Pendle + Ethena), transactions wired, strategy docs live. Frontend migrated to Vercel 2026-05-26 (keeper stays on VPS).
 **Tests:** 847 total — 352 core monorepo (212 TS + 132 Rust + 8 integration) + 322 keeper + 169 frontend (145 unit + 24 E2E)
 **Programs:** 33 instructions total — 27 allocator + 3 adaptor + 3 mock vault
 **On-chain TVL:** ~260 USDC (moderate: 210, aggressive: 50) — needs redeploy after hardening
-**Submission:** Strategy docs at nanuqfi.com/strategy. Demo video pending (last blocker).
+**Submission:** Strategy docs at nanuqfi.com/strategy, demo video at nanuqfi.com/cdn/videos/demo.mp4 (5:46, 13.5MB).
 
 ---
 
