@@ -23,9 +23,8 @@
 - [x] Wallet connect in frontend (Solana wallet adapter)
 - [x] Deploy allocator to devnet — `2QtJ5kmxLuW2jYCFpJMtzZ7PCnKdoMwkeueYoDUi5z5P`
 - [x] Deploy keeper to VPS (Docker) — keeper.nanuqfi.com live
-- [x] Deploy frontend — app.nanuqfi.com live
-- [x] Deploy marketing site — nanuqfi.com live
-- [x] CI/CD (GitHub Actions for all 4 repos → GHCR → VPS auto-deploy)
+- [x] Deploy frontend on Vercel — nanuqfi.com live (apex + www + app subdomain, migrated from VPS Docker on 2026-05-26)
+- [x] CI/CD — keeper: GHCR → VPS auto-deploy; frontend: Vercel auto-deploy via GitHub App on push to `main`
 - [x] CI pipeline: build + lint + test + npm audit + cargo audit on every push/PR
 
 ### Advanced Features (COMPLETE)
