@@ -21,7 +21,6 @@ NanuqFi is a protocol-agnostic, AI-powered yield routing layer for DeFi. Users d
 | `nanuqfi/nanuqfi` | **Core monorepo** — SDK packages + Anchor program | TypeScript, Rust/Anchor, pnpm + Turborepo |
 | `nanuqfi/nanuqfi-keeper` | **AI Keeper** — strategy bot with algorithm engine + Claude AI | TypeScript, Anthropic SDK |
 | `nanuqfi/nanuqfi-app` | **Frontend** — marketing + dashboard + strategy docs (consolidated) | Next.js 16, Tailwind 4, React 19, Playwright E2E |
-| `nanuqfi/nanuqfi-web` | **Marketing site** — public landing page (static export) | Next.js 16 (static), React 19, Tailwind 4 |
 
 **Organization mission:** Build the yield routing layer for DeFi — transparent, trustless, AI-enhanced.
 
